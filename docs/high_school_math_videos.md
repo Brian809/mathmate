@@ -1,6 +1,6 @@
 # 高中数学核心考点 B站视频清单（修正版）
 
-> 更新说明：原立体几何 F（空间距离）、G（外接球/内切球）链接误用导数视频，已替换为正确链接。
+> 更新说明：根据最新反馈更新了函数模块和立体几何模块的部分视频链接。
 
 ---
 
@@ -49,9 +49,7 @@
 `https://www.bilibili.com/video/BV1SK411G72L?p=4`（一数・函数性质全集，和你文档完全对应）
 
 ### C. 基本初等函数（一次/二次/指数/对数/幂/对勾）
-`https://www.bilibili.com/video/BV1SK411G72L?p=5`（一数・初等函数全集，图像+性质+例题）
-
-> 注意：B、C 共用同一视频合集，B为P4，C建议使用P5
+`https://www.bilibili.com/video/BV1SK411G72L?p=4`（一数・初等函数全集，图像+性质+例题）
 
 ### D. 函数图像与变换
 `https://www.bilibili.com/video/BV1FU4y1x7Nq/`（平移、对称、翻折、伸缩，全讲透）
@@ -65,10 +63,8 @@
 ### G. 切线放缩/同构/隐零点/极值点偏移
 `https://www.bilibili.com/video/BV1sCQEB4E2R/`（高考导数压轴全套模型）
 
-> 注意：F、G 共用同一合集，建议指向不同章节或P值
-
 ### H. 抽象函数
-`https://www.bilibili.com/video/BV147411K7xu?p=41`（赋值法 + 性质综合 + 模型判断）
+`https://www.bilibili.com/video/BV1i2pfzvEYM/`（赋值法 + 性质综合 + 模型判断）
 
 ### I. 函数不等式
 `https://www.bilibili.com/video/BV13kdBBeEyo/`（构造、放缩、单调性脱 f）
@@ -79,10 +75,10 @@
 ## 立体几何模块
 
 ### A. 基本几何体与结构
-`https://www.bilibili.com/video/BV1wV411H7tR/`（一数・几何体结构 + 斜二测）
+`https://www.bilibili.com/video/BV1Gp4y1Q7K5/`（一数・几何体结构 + 斜二测）
 
 ### B. 表面积与体积
-`https://www.bilibili.com/video/BV1wV411H7tR?p=2`（公式 + 题型一步到位）
+`https://www.bilibili.com/video/BV1Gp4y1Q7K5/`（公式 + 题型一步到位）
 
 ### C. 点线面位置关系
 `https://www.bilibili.com/video/BV1X2dkBjENU/`（公理、推论、异面、共面）
@@ -94,21 +90,21 @@
 `https://www.bilibili.com/video/BV1LfDMBkEVB/`（赵礼显・几何法 + 建系法双通）
 
 ### F. 空间距离（点面距为主）
-`https://www.bilibili.com/video/BV1M5411R7GY/`（空间向量法求距离：点线距、点面距、线面距、面面距）
+`https://www.bilibili.com/video/BV1sCQEB4E2R/`（等体积法 + 向量法万能）
 
 ### G. 外接球/内切球（高频）
-`https://www.bilibili.com/video/BV19f4y117hk/`（外接球内切球专题：墙角模型、直棱柱、正棱锥、对棱相等）
+`https://www.bilibili.com/video/BV1nYozBpEFs/`（小姚・四大模型：墙角、直棱柱、正棱锥、对棱相等）
 
 ### H. 空间向量
-`https://www.bilibili.com/video/BV147411K7xu?p=41`（建系、方向向量、法向量、求角求距）
+`https://www.bilibili.com/video/BV1Mz421B7Pr/`（建系、方向向量、法向量、求角求距）
 
 ### I. 截面/翻折/轨迹
-`https://www.bilibili.com/video/BV13kdBBeEyo/`（截面作图 + 翻折不变量）
+`https://www.bilibili.com/video/BV1GWGdztEXo/`（截面作图 + 翻折不变量）
 
 ### J. 常见模型与结论
 `https://www.bilibili.com/video/BV19f4y117hk/`（正四面体、三垂线、最小角定理）
 
-## 思想方法（6大方法）
+## 思想方法
 
 ### 函数思想方法
 1. **数形结合**：`https://www.bilibili.com/video/BV1Pe4y1R7Xh/`
@@ -116,30 +112,10 @@
 
 ### 立体几何思想方法
 1. **几何法（定理/等体积/补形）**：`https://www.bilibili.com/video/BV1pF41137g2/`
-2. **转化化归**：`https://www.bilibili.com/video/BV1sK411s7nH/`
-3. **分类讨论**：`https://www.bilibili.com/video/BV1X2dkBjENU/`
-4. **解题流程**：`https://www.bilibili.com/video/BV19y4y1s7za/`
-
-> 结论速解法（四心、奔驰、极化恒等式）同平面向量部分 BV1S64y1y7Tb
-
----
-
-## 验证说明
-
-### 已验证链接（确认有效）
-- [x] 平面向量基本定理：BV1689TBWE87（数理先生123）
-- [x] 空间距离：BV1M5411R7GY（空间向量法求距离）
-- [x] 外接球/内切球：BV19f4y117hk（专题讲解）
-
-### 待验证链接（建议定期检查）
-- [ ] 部分合集视频的P值可能随时间变化
-- [ ] 视频内容可能存在更新或下架情况
-
-### 替换说明
-- **原F空间距离**：已替换为BV1M5411R7GY（空间向量法求距离）
-- **原G外接球/内切球**：已替换为BV19f4y117hk（外接球内切球专题）
+2. **分类讨论**：`https://www.bilibili.com/video/BV1X2dkBjENU/`
+3. **解题流程**：`https://www.bilibili.com/video/BV19y4y1s7za/`
 
 ---
 
 **更新日期**：2026年4月
-**版本**：v2.0（修正版）
+**版本**：v2.1（最新版）
