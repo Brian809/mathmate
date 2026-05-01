@@ -101,7 +101,8 @@ final List<VideoResource> allVideoResources = <VideoResource>[
   ),
 
   // ========== 高中数学 ==========
-  // 集合、逻辑与不等式
+
+  // ==================== 集合、逻辑与不等式 ====================
   const VideoResource(
     title: '集合与逻辑入门',
     grade: '高中',
@@ -117,7 +118,7 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     uploader: '一数',
   ),
   const VideoResource(
-    title: '核心概念梳理',
+    title: '核心概念梳理：集合与不等式',
     grade: '高中',
     module: '集合、逻辑与不等式',
     bvId: 'BV1Z5411j7jB',
@@ -144,87 +145,80 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     bvId: 'BV1EJ411y7J6',
     uploader: '鲲哥带你学数学',
   ),
-  const VideoResource(
-    title: '数学思想与方法',
-    grade: '高中',
-    module: '集合、逻辑与不等式',
-    bvId: 'BV1jx41127Ky',
-    uploader: '数学超人math',
-  ),
 
-  // 函数体系
+  // ==================== 函数体系（来自 curated 清单） ====================
   const VideoResource(
-    title: '函数性质合集',
-    grade: '高中',
-    module: '函数体系',
-    bvId: 'BV1SK411G72L',
-    uploader: '一数',
-  ),
-  const VideoResource(
-    title: '函数与导数综合',
-    grade: '高中',
-    module: '函数体系',
-    bvId: 'BV1sCQEB4E2R',
-    uploader: '佟大大还是ETT',
-  ),
-  const VideoResource(
-    title: '函数概念与三要素',
+    title: '函数三要素：定义域、值域、解析式',
     grade: '高中',
     module: '函数体系',
     bvId: 'BV1v64y1v7kx',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '函数图像与变换',
+    title: '函数基本性质：单调、奇偶、周期、对称',
+    grade: '高中',
+    module: '函数体系',
+    bvId: 'BV1SK411G72L',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '基本初等函数：一次/二次/指数/对数/幂/对勾',
+    grade: '高中',
+    module: '函数体系',
+    bvId: 'BV1SK411G72L',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '函数图像与变换：平移、对称、翻折、伸缩',
     grade: '高中',
     module: '函数体系',
     bvId: 'BV1FU4y1x7Nq',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '函数与方程零点',
+    title: '函数与方程：零点存在、个数、图像法',
     grade: '高中',
     module: '函数体系',
     bvId: 'BV1ZEoSBkEtX',
     uploader: '小姚老师',
   ),
   const VideoResource(
-    title: '抽象函数',
+    title: '导数与应用：切线、单调、极值、最值、恒成立',
+    grade: '高中',
+    module: '函数体系',
+    bvId: 'BV1sCQEB4E2R',
+    uploader: '佟大大还是ETT',
+  ),
+  const VideoResource(
+    title: '切线放缩、同构、隐零点、极值点偏移',
+    grade: '高中',
+    module: '函数体系',
+    bvId: 'BV1sCQEB4E2R',
+    uploader: '佟大大还是ETT',
+  ),
+  const VideoResource(
+    title: '抽象函数：赋值法 + 性质综合 + 模型判断',
     grade: '高中',
     module: '函数体系',
     bvId: 'BV1i2pfzvEYM',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '函数不等式',
+    title: '函数不等式：构造、放缩、单调性脱f',
     grade: '高中',
     module: '函数体系',
     bvId: 'BV13kdBBeEyo',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '生活化函数案例',
-    grade: '高中',
-    module: '函数体系',
-    bvId: 'BV1Z5411j7jB',
-    uploader: '王梦抒',
-  ),
-  const VideoResource(
-    title: '函数性质速解',
-    grade: '高中',
-    module: '函数体系',
-    bvId: 'BV1iZ4y1x7Zk',
-    uploader: '铭哥套路高考数学',
-  ),
-  const VideoResource(
-    title: '高考高频结论速记',
+    title: '高考高频结论速记：函数篇',
     grade: '高中',
     module: '函数体系',
     bvId: 'BV1Pe4y1R7Xh',
     uploader: '小姚老师',
   ),
 
-  // 三角函数
+  // ==================== 三角函数 ====================
   const VideoResource(
     title: '正弦/余弦定理',
     grade: '高中',
@@ -261,12 +255,33 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     uploader: '铭哥套路高考数学',
   ),
 
-  // 向量与复数
+  // ==================== 向量与复数（平面向量 来自 curated 清单） ====================
   const VideoResource(
-    title: '平面向量合集',
+    title: '向量基本概念',
     grade: '高中',
     module: '向量与复数',
     bvId: 'BV16r4y1A7T6',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '平面向量基本定理',
+    grade: '高中',
+    module: '向量与复数',
+    bvId: 'BV1689TBWE87',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '坐标运算',
+    grade: '高中',
+    module: '向量与复数',
+    bvId: 'BV1XmXvBQETf',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '数量积：定义、坐标、运算律',
+    grade: '高中',
+    module: '向量与复数',
+    bvId: 'BV1qzX5BqE6J',
     uploader: '一数',
   ),
   const VideoResource(
@@ -277,17 +292,38 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     uploader: '一数',
   ),
   const VideoResource(
-    title: '奔驰定理',
+    title: '三角形四心向量表示',
+    grade: '高中',
+    module: '向量与复数',
+    bvId: 'BV1UW4y1h7u9',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '奔驰定理（含奔驰定理 + 四心）',
     grade: '高中',
     module: '向量与复数',
     bvId: 'BV1S64y1y7Tb',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '三角形四心向量表示',
+    title: '基底法',
     grade: '高中',
     module: '向量与复数',
-    bvId: 'BV1UW4y1h7u9',
+    bvId: 'BV1UwDjBXEdn',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '几何意义法：投影、三角不等式',
+    grade: '高中',
+    module: '向量与复数',
+    bvId: 'BV1jhAKzTEDa',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '结论速解法：四心、奔驰、极化恒等式',
+    grade: '高中',
+    module: '向量与复数',
+    bvId: 'BV1S64y1y7Tb',
     uploader: '一数',
   ),
   const VideoResource(
@@ -297,138 +333,238 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     bvId: 'BV1jJ411274s',
     uploader: '佟大大还是ETT',
   ),
-  const VideoResource(
-    title: '向量与复数的巧算',
-    grade: '高中',
-    module: '向量与复数',
-    bvId: 'BV1iZ4y1x7Zk',
-    uploader: '铭哥套路高考数学',
-  ),
 
-  // 立体几何
+  // ==================== 立体几何（来自 curated 清单） ====================
   const VideoResource(
-    title: '立体几何全讲解',
+    title: '基本几何体与结构 + 斜二测',
     grade: '高中',
     module: '立体几何',
     bvId: 'BV1Gp4y1Q7K5',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '几何体计算',
+    title: '表面积与体积：公式 + 题型一步到位',
     grade: '高中',
     module: '立体几何',
-    bvId: 'BV1oM4y117LP',
+    bvId: 'BV1Gp4y1Q7K5',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '平行与垂直判定',
-    grade: '高中',
-    module: '立体几何',
-    bvId: 'BV1pF41137g2',
-    uploader: '一数',
-  ),
-  const VideoResource(
-    title: '点线面位置关系',
+    title: '点线面位置关系：公理、推论、异面、共面',
     grade: '高中',
     module: '立体几何',
     bvId: 'BV1X2dkBjENU',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '空间角专题',
+    title: '平行与垂直判定：线线↔线面↔面面',
+    grade: '高中',
+    module: '立体几何',
+    bvId: 'BV1pF41137g2',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '空间角：异面角、线面角、二面角',
     grade: '高中',
     module: '立体几何',
     bvId: 'BV1LfDMBkEVB',
     uploader: '赵礼显老师',
   ),
   const VideoResource(
-    title: '外接球与内切球',
+    title: '空间距离：等体积法 + 向量法',
+    grade: '高中',
+    module: '立体几何',
+    bvId: 'BV1sCQEB4E2R',
+    uploader: '佟大大还是ETT',
+  ),
+  const VideoResource(
+    title: '外接球与内切球：墙角、直棱柱、正棱锥、对棱相等',
     grade: '高中',
     module: '立体几何',
     bvId: 'BV1nYozBpEFs',
     uploader: '小姚老师',
   ),
   const VideoResource(
-    title: '空间向量建系法',
+    title: '空间向量：建系、方向向量、法向量、求角求距',
     grade: '高中',
     module: '立体几何',
     bvId: 'BV1Mz421B7Pr',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '截面翻折与轨迹',
+    title: '截面、翻折与轨迹：截面作图 + 翻折不变量',
     grade: '高中',
     module: '立体几何',
     bvId: 'BV1GWGdztEXo',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '常见模型与结论',
+    title: '常见模型与结论：正四面体、三垂线、最小角定理',
     grade: '高中',
     module: '立体几何',
     bvId: 'BV19f4y117hk',
     uploader: '一数',
   ),
-  const VideoResource(
-    title: '空间向量妙用',
-    grade: '高中',
-    module: '立体几何',
-    bvId: 'BV1jJ411274s',
-    uploader: '佟大大还是ETT',
-  ),
-  const VideoResource(
-    title: '线面平行讲解',
-    grade: '高中',
-    module: '立体几何',
-    bvId: 'BV1rk4y1A7mV',
-    uploader: '铭哥套路高考数学',
-  ),
-  const VideoResource(
-    title: '空间垂直关系',
-    grade: '高中',
-    module: '立体几何',
-    bvId: 'BV1e14y1974H',
-    uploader: '云凌Sapphire',
-  ),
 
-  // 解析几何
+  // ==================== 解析几何（来自 curated 清单） ====================
+  // 一、基础解题方法
   const VideoResource(
-    title: '直线与圆合集',
+    title: '点差法：中点弦',
     grade: '高中',
     module: '解析几何',
-    bvId: 'BV1Pe4y1R7Xh',
+    bvId: 'BV183B1Y2E6H',
     uploader: '一数',
   ),
   const VideoResource(
-    title: '圆锥曲线大全',
+    title: '平移齐次化：斜率和与积',
     grade: '高中',
     module: '解析几何',
-    bvId: 'BV1jJ411274s',
-    uploader: '佟大大还是ETT',
+    bvId: 'BV1DqzkBvE6T',
+    uploader: '一数',
   ),
   const VideoResource(
-    title: '圆锥曲线二级结论',
+    title: '仿射变换：椭圆变圆',
     grade: '高中',
     module: '解析几何',
-    bvId: 'BV1iZ4y1x7Zk',
-    uploader: '赵礼显老师',
+    bvId: 'BV1DPmdYeE84',
+    uploader: '一数',
   ),
   const VideoResource(
-    title: '导数与圆锥曲线综合',
+    title: '隐函数求导：切线速算',
     grade: '高中',
     module: '解析几何',
-    bvId: 'BV1nL41187k7',
-    uploader: '赵礼显老师',
+    bvId: 'BV1EWohB4ETE',
+    uploader: '一数',
   ),
   const VideoResource(
-    title: '大题第一问秒杀',
+    title: '非对称韦达定理',
     grade: '高中',
     module: '解析几何',
-    bvId: 'BV1iZ4y1x7Zk',
-    uploader: '铭哥套路高考数学',
+    bvId: 'BV1kaX5BGEok',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '极坐标与参数方程',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1U541167FQ',
+    uploader: '一数',
   ),
 
-  // 数列
+  // 二、高阶几何模型
+  const VideoResource(
+    title: '蒙日圆',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV15LsnzcERh',
+    uploader: '小姚老师',
+  ),
+  const VideoResource(
+    title: '阿基米德三角形',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1Tw4m1Z72q',
+    uploader: '小姚老师',
+  ),
+  const VideoResource(
+    title: '阿波罗尼斯圆（阿氏圆）',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1RiULB9EpG',
+    uploader: '小姚老师',
+  ),
+  const VideoResource(
+    title: '米勒圆：最大视角问题',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1uf4y1P7Ry',
+    uploader: '小姚老师',
+  ),
+  const VideoResource(
+    title: '圆幂定理与根轴',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1Yv4y1N7p2',
+    uploader: '小姚老师',
+  ),
+
+  // 三、圆锥曲线核心结论
+  const VideoResource(
+    title: '焦点三角形：面积与离心率',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1LSonBfEHs',
+    uploader: '赵礼显老师',
+  ),
+  const VideoResource(
+    title: '焦半径公式：倾斜角+坐标法',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1m3F9zyEV1',
+    uploader: '赵礼显老师',
+  ),
+  const VideoResource(
+    title: '抛物线焦点弦性质',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1Xn9SB8E8C',
+    uploader: '赵礼显老师',
+  ),
+  const VideoResource(
+    title: '第三定义：斜率积为定值',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV16ZV1z7E5N',
+    uploader: '赵礼显老师',
+  ),
+  const VideoResource(
+    title: '圆锥曲线光学性质',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1qkAczWE5K',
+    uploader: '赵礼显老师',
+  ),
+
+  // 四、直线与曲线综合
+  const VideoResource(
+    title: '联立+韦达定理：通法全解',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1ZY411s7xB',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '切线与切点弦',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1x3411Z7X6',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '定点定值问题',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1NeDrYtEQ3',
+    uploader: '小姚老师',
+  ),
+  const VideoResource(
+    title: '弦长与面积最值',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1MH4y167ui',
+    uploader: '小姚老师',
+  ),
+
+  // 五、轨迹方程求法
+  const VideoResource(
+    title: '轨迹方程：定义法、相关点法、参数法',
+    grade: '高中',
+    module: '解析几何',
+    bvId: 'BV1JU4y1o7CF',
+    uploader: '一数',
+  ),
+
+  // ==================== 数列 ====================
   const VideoResource(
     title: '等差与等比数列',
     grade: '高中',
@@ -458,13 +594,13 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     uploader: '铭哥套路高考数学',
   ),
 
-  // 导数及其应用
+  // ==================== 导数及其应用 ====================
   const VideoResource(
     title: '导数综合讲解',
     grade: '高中',
     module: '导数及其应用',
     bvId: 'BV1sCQEB4E2R',
-    uploader: '一数',
+    uploader: '佟大大还是ETT',
   ),
   const VideoResource(
     title: '导数大题拆解',
@@ -488,7 +624,7 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     uploader: '赵礼显老师',
   ),
 
-  // 概率统计与排列组合
+  // ==================== 概率统计与排列组合 ====================
   const VideoResource(
     title: '排列组合合集',
     grade: '高中',
@@ -516,6 +652,43 @@ final List<VideoResource> allVideoResources = <VideoResource>[
     module: '概率统计与排列组合',
     bvId: 'BV1iZ4y1x7Zk',
     uploader: '铭哥套路高考数学',
+  ),
+
+  // ==================== 思想方法（来自 curated 清单） ====================
+  const VideoResource(
+    title: '数形结合思想',
+    grade: '高中',
+    module: '思想方法',
+    bvId: 'BV1Pe4y1R7Xh',
+    uploader: '小姚老师',
+  ),
+  const VideoResource(
+    title: '导数通法：切线、单调、极值、最值',
+    grade: '高中',
+    module: '思想方法',
+    bvId: 'BV1sCQEB4E2R',
+    uploader: '佟大大还是ETT',
+  ),
+  const VideoResource(
+    title: '几何法：定理法、等体积法、补形法',
+    grade: '高中',
+    module: '思想方法',
+    bvId: 'BV1pF41137g2',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '分类讨论思想',
+    grade: '高中',
+    module: '思想方法',
+    bvId: 'BV1X2dkBjENU',
+    uploader: '一数',
+  ),
+  const VideoResource(
+    title: '立体几何解题流程',
+    grade: '高中',
+    module: '思想方法',
+    bvId: 'BV19y4y1s7za',
+    uploader: '一数',
   ),
 ];
 

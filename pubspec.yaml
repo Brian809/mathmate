@@ -87,6 +87,24 @@ flutter:
     - assets/visualization/index.html
     - assets/visualization/jxg_engine.js
     - assets/visualization/jsxgraphcore.js
+    - assets/geogebra/
+    - assets/geogebra/css/
+    - assets/geogebra/css/bundles/
+    - assets/geogebra/web3d/
+    - assets/geogebra/web3d/deferredjs/
+    - assets/geogebra/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/
+    - assets/geogebra/web3d/fonts/
+    - assets/geogebra/web3d/fonts/base/
+    - assets/geogebra/web3d/fonts/cyrillic/
+    - assets/geogebra/web3d/fonts/euler/
+    - assets/geogebra/web3d/fonts/greek/
+    - assets/geogebra/web3d/fonts/latin/
+    - assets/geogebra/web3d/fonts/latin/optional/
+    - assets/geogebra/web3d/fonts/licences/
+    - assets/geogebra/web3d/fonts/maths/
+    - assets/geogebra/web3d/fonts/maths/optional/
+    - assets/geogebra/web3d/html/
+    - assets/geogebra/web3d/js/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

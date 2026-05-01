@@ -25,7 +25,10 @@ class VideoInfo {
       final String apiUrl =
           'https://api.bilibili.com/x/web-interface/view?bvid=$bvId';
       final http.Response response = await http
-          .get(Uri.parse(apiUrl))
+          .get(Uri.parse(apiUrl), headers: <String, String>{
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            'Referer': 'https://www.bilibili.com/',
+          })
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {

@@ -5,7 +5,7 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:mathmate/data/conversation_models.dart';
 import 'package:mathmate/data/conversation_repository.dart';
 import 'package:mathmate/services/chat_stream_service.dart';
-import 'package:mathmate/services/latex_compiler.dart';
+import 'package:mathmate/services/katex_pdf_service.dart';
 import 'package:mathmate/services/model_service.dart';
 import 'package:mathmate/services/vivo_chat_service.dart';
 
@@ -383,29 +383,32 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _compileLatex(String content) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('正在编译 LaTeX...'),
+        content: Text('正在生成 PDF...'),
         duration: Duration(seconds: 1),
       ),
     );
 
-    final LatexCompiler compiler = LatexCompiler();
-    final LatexCompileResult result = await compiler.compile(content);
+    final KatexPdfService pdfService = KatexPdfService();
+    final KatexPdfResult result = await pdfService.exportToPdf(
+      title: '蓝心数学助手 — 解答',
+      content: content,
+      context: context,
+    );
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     if (result.success) {
-      await compiler.openPdf(result.pdfPath!);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('PDF 编译完成'),
-          duration: Duration(seconds: 2),
+          content: Text('PDF 生成完成，请在打印对话框中选择"另存为 PDF"'),
+          duration: Duration(seconds: 3),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('编译失败: ${result.error}'),
+          content: Text('导出失败: ${result.error}'),
           duration: const Duration(seconds: 3),
           backgroundColor: Colors.red.shade400,
         ),
