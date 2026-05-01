@@ -30,6 +30,10 @@ class _GeogebraPageState extends State<GeogebraPage> {
         return '几何画板';
       case 'graphing':
         return '函数绘图';
+      case '3d':
+        return '3D视图';
+      case 'scientific':
+        return '科学计算器';
       default:
         return '几何画板';
     }
@@ -42,6 +46,10 @@ class _GeogebraPageState extends State<GeogebraPage> {
         return 'geometry.html';
       case 'graphing':
         return 'graphing.html';
+      case '3d':
+        return '3d.html';
+      case 'scientific':
+        return 'scientific.html';
       default:
         return 'geometry.html';
     }

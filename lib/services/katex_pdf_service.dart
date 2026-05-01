@@ -1,11 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 /// KaTeX + WebView PDF 导出服务
-/// 使用 WebView 渲染 KaTeX 公式，通过系统打印对话框导出 PDF
+/// 使用内嵌 KaTeX 渲染公式（无需网络），通过系统打印对话框导出 PDF
 class KatexPdfService {
+  static String? _cachedJs;
+  static String? _cachedCss;
+
   /// 导出 PDF - 在 WebView 中预览，点击打印按钮触发系统打印
   Future<KatexPdfResult> exportToPdf({
     required String title,
@@ -14,18 +16,14 @@ class KatexPdfService {
     String subtitle = '由 MathMate 生成',
   }) async {
     try {
-      // 生成 HTML 内容
+      // 确保 KaTeX JS/CSS 已缓存
+      await _ensureKatexLoaded();
+
+      // 生成 HTML 内容（内嵌 KaTeX）
       final String htmlContent = _generateHtml(title, subtitle, content);
 
-      // 保存 HTML 文件到临时目录
-      final Directory tempDir = await getTemporaryDirectory();
-      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-      final File htmlFile = File('${tempDir.path}/mathmate_print_$timestamp.html');
-      await htmlFile.writeAsString(htmlContent);
-
-      // 打开 WebView 打印对话框
       if (context.mounted) {
-        await _openPrintDialog(context, htmlFile);
+        await _openPrintDialog(context, htmlContent);
       }
 
       return KatexPdfResult(success: true);
@@ -34,9 +32,15 @@ class KatexPdfService {
     }
   }
 
-  /// 生成 HTML 内容（包含 KaTeX）
+  /// 从 assets 加载 KaTeX JS 和 CSS（仅加载一次，全局缓存）
+  Future<void> _ensureKatexLoaded() async {
+    if (_cachedJs != null && _cachedCss != null) return;
+    _cachedJs ??= await rootBundle.loadString('assets/katex/katex.min.js');
+    _cachedCss ??= await rootBundle.loadString('assets/katex/katex.min.css');
+  }
+
+  /// 生成 HTML 内容（KaTeX 内嵌，零外部依赖）
   String _generateHtml(String title, String subtitle, String content) {
-    // 处理 Markdown/LaTeX 内容
     final String processedContent = _processMarkdownLatex(content);
 
     return '''
@@ -45,90 +49,44 @@ class KatexPdfService {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <style>$_cachedCss</style>
   <style>
     * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.7;
       color: #333;
       max-width: 800px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 24px;
       background: #fff;
     }
-    .header {
-      text-align: center;
-      border-bottom: 2px solid #3F51B5;
-      padding-bottom: 16px;
-      margin-bottom: 24px;
-    }
-    .header h1 {
-      color: #3F51B5;
-      font-size: 22px;
-      margin: 0;
-    }
-    .header .subtitle {
-      color: #666;
-      font-size: 12px;
-      margin-top: 4px;
-    }
-    .section { margin-bottom: 20px; }
-    .section-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #1A1A1A;
-      border-left: 4px solid #3F51B5;
-      padding-left: 10px;
-      margin-bottom: 10px;
-    }
-    .content {
-      padding: 12px;
-      background: #F8F9FC;
-      border-radius: 8px;
-    }
-    .formula-preview {
-      padding: 16px;
-      background: #E3F2FD;
-      border-radius: 8px;
-      text-align: center;
-      margin-top: 12px;
-    }
-    .math-display {
-      margin: 12px 0;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding: 8px 0;
-    }
+    .header { text-align: center; border-bottom: 2px solid #3F51B5; padding-bottom: 16px; margin-bottom: 24px; }
+    .header h1 { color: #3F51B5; font-size: 22px; margin: 0; }
+    .header .subtitle { color: #999; font-size: 12px; margin-top: 4px; }
+    h1 { font-size: 20px; color: #1A1A1A; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #EEE; }
+    h2 { font-size: 17px; color: #333; margin: 18px 0 8px; border-left: 4px solid #3F51B5; padding-left: 10px; }
+    h3 { font-size: 15px; color: #555; margin: 14px 0 6px; }
+    p { margin: 6px 0; }
+    .math-display { margin: 12px 0; overflow-x: auto; padding: 8px 0; text-align: center; }
     .math-display .katex { font-size: 1.1em; }
-    pre {
-      background: #F5F5F5;
-      padding: 12px;
-      border-radius: 6px;
-      overflow-x: auto;
-      font-size: 13px;
-    }
-    code {
-      background: #F5F5F5;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'Consolas', 'Monaco', monospace;
-      font-size: 13px;
-    }
-    blockquote {
-      border-left: 3px solid #3F51B5;
-      margin: 12px 0;
-      padding: 8px 16px;
-      background: #F5F7FF;
-      color: #555;
-    }
-    h1, h2, h3 { margin-top: 16px; margin-bottom: 8px; }
+    pre { background: #F5F5F5; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+    code { background: #F5F5F5; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; }
+    blockquote { border-left: 3px solid #3F51B5; margin: 12px 0; padding: 8px 16px; background: #F5F7FF; color: #555; }
     ul, ol { padding-left: 24px; }
     li { margin-bottom: 4px; }
+    .step-label { font-weight: bold; color: #3F51B5; margin-top: 12px; }
+    .conclusion-box { background: #E8F5E9; border-left: 4px solid #4CAF50; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+    .conclusion-box strong { color: #2E7D32; }
+    .warning-box { background: #FFF3E0; border-left: 4px solid #FF9800; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+    .analysis-box { background: #E3F2FD; border-left: 4px solid #2196F3; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+    .render-error { color: #999; font-style: italic; }
     @page { margin: 15mm; }
-    @media print { body { padding: 0; } }
+    @media print {
+      body { padding: 0; max-width: none; }
+      .no-print { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -136,23 +94,25 @@ class KatexPdfService {
     <h1>$title</h1>
     <div class="subtitle">$subtitle</div>
   </div>
-  <div class="content">
-    $processedContent
-  </div>
+  $processedContent
+  <script>$_cachedJs</script>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // 渲染 KaTeX 公式
+    (function() {
+      var errors = [];
       document.querySelectorAll('.math-tex').forEach(function(el) {
         try {
           katex.render(el.textContent, el, {
             throwOnError: false,
             displayMode: el.classList.contains('math-display')
           });
-        } catch (e) {}
+        } catch (e) {
+          errors.push(el.textContent.substring(0, 80));
+          el.innerHTML = '<span class="render-error">[公式渲染失败]</span>';
+        }
       });
-      // 自动触发打印
-      setTimeout(function() { window.print(); }, 800);
-    });
+      // 即使部分公式失败也触发打印
+      setTimeout(function() { window.print(); }, 600);
+    })();
   </script>
 </body>
 </html>
@@ -163,82 +123,85 @@ class KatexPdfService {
   String _processMarkdownLatex(String content) {
     String text = content;
 
-    // 处理代码块
+    // 代码块（最高优先级）
     text = text.replaceAllMapped(
       RegExp(r'```(\w*)\n?([\s\S]*?)```'),
-      (Match m) => '<pre><code>${_escapeHtml(m.group(2)?.trim() ?? '')}</code></pre>',
+      (Match m) => '<pre><code>${_escapeHtml((m.group(2) ?? '').trim())}</code></pre>',
     );
 
-    // 处理行内代码
+    // 行内代码
     text = text.replaceAllMapped(
       RegExp(r'`([^`]+)`'),
       (Match m) => '<code>${_escapeHtml(m.group(1) ?? '')}</code>',
     );
 
-    // 处理 $$...$$ 展示数学
+    // $$...$$ 展示公式
     text = text.replaceAllMapped(
       RegExp(r'\$\$([\s\S]*?)\$\$'),
-      (Match m) => '<div class="math-display"><span class="math-tex">${_escapeHtml(m.group(1)?.trim() ?? '')}</span></div>',
+      (Match m) => '<div class="math-display"><span class="math-tex math-display">${_escapeHtml((m.group(1) ?? '').trim())}</span></div>',
     );
 
-    // 处理 $...$ 内联数学
+    // $...$ 内联公式
     text = text.replaceAllMapped(
       RegExp(r'\$([^\$\n]+?)\$'),
-      (Match m) => '<span class="math-inline"><span class="math-tex">${_escapeHtml(m.group(1)?.trim() ?? '')}</span></span>',
+      (Match m) => '<span class="math-tex">${_escapeHtml((m.group(1) ?? '').trim())}</span>',
     );
 
-    // 处理标题
+    // 标题
+    text = text.replaceAllMapped(RegExp(r'^### (.+)$', multiLine: true), (Match m) => '<h3>${m.group(1)}</h3>');
+    text = text.replaceAllMapped(RegExp(r'^## (.+)$', multiLine: true), (Match m) => '<h2>${m.group(1)}</h2>');
+    text = text.replaceAllMapped(RegExp(r'^# (.+)$', multiLine: true), (Match m) => '<h1>${m.group(1)}</h1>');
+
+    // 结论框：**结论** 或 **关键** 开头的内容
     text = text.replaceAllMapped(
-      RegExp(r'^### (.+)$', multiLine: true),
-      (Match m) => '<h3>${m.group(1)}</h3>',
-    );
-    text = text.replaceAllMapped(
-      RegExp(r'^## (.+)$', multiLine: true),
-      (Match m) => '<h2>${m.group(1)}</h2>',
-    );
-    text = text.replaceAllMapped(
-      RegExp(r'^# (.+)$', multiLine: true),
-      (Match m) => '<h1>${m.group(1)}</h1>',
+      RegExp(r'\*\*(结论|关键|注意|总结|核心|重要)[：:]?\*\*\s*(.+?)(?=\n\n|\n\*\*|$)', multiLine: true),
+      (Match m) {
+        final String type = (m.group(1) ?? '').trim();
+        final String body = (m.group(2) ?? '').trim();
+        final String boxClass = type == '注意' ? 'warning-box' : 'conclusion-box';
+        return '<div class="$boxClass"><strong>$type：</strong>$body</div>';
+      },
     );
 
-    // 处理加粗
+    // 分析框：**分析** 或 **思路** 开头的内容
     text = text.replaceAllMapped(
-      RegExp(r'\*\*([^*]+)\*\*'),
-      (Match m) => '<strong>${m.group(1)}</strong>',
-    );
-    text = text.replaceAllMapped(
-      RegExp(r'\*([^*]+)\*'),
-      (Match m) => '<em>${m.group(1)}</em>',
-    );
-
-    // 处理列表
-    text = text.replaceAllMapped(
-      RegExp(r'^\s*[-*+]\s+(.+)$', multiLine: true),
-      (Match m) => '<li>${m.group(1)}</li>',
-    );
-    text = text.replaceAllMapped(
-      RegExp(r'(<li>.*</li>\n?)+'),
-      (Match m) => '<ul>${m.group(0)}</ul>',
+      RegExp(r'\*\*(分析|思路|解析)[：:]?\*\*\s*(.+?)(?=\n\n|\n\*\*|$)', multiLine: true),
+      (Match m) {
+        final String type = (m.group(1) ?? '').trim();
+        final String body = (m.group(2) ?? '').trim();
+        return '<div class="analysis-box"><strong>$type：</strong>$body</div>';
+      },
     );
 
-    // 处理引用
+    // 加粗
+    text = text.replaceAllMapped(RegExp(r'\*\*([^*]+)\*\*'), (Match m) => '<strong>${m.group(1)}</strong>');
+    text = text.replaceAllMapped(RegExp(r'\*([^*]+)\*'), (Match m) => '<em>${m.group(1)}</em>');
+
+    // 步骤标签（第X步 / Step X / 步骤X）
     text = text.replaceAllMapped(
-      RegExp(r'^>\s*(.+)$', multiLine: true),
-      (Match m) => '<blockquote>${m.group(1)}</blockquote>',
+      RegExp(r'(第\s*[一二三四五六七八九十百\d]+\s*步|Step\s*\d+|步骤\s*\d+)', multiLine: true),
+      (Match m) => '<span class="step-label">${m.group(1)}</span>',
     );
 
-    // 处理换行为段落
-    final lines = text.split('\n');
-    final buffer = StringBuffer();
-    for (final line in lines) {
-      final trimmed = line.trim();
+    // 列表
+    text = text.replaceAllMapped(RegExp(r'^\s*[-*+]\s+(.+)$', multiLine: true), (Match m) => '<li>${m.group(1)}</li>');
+    text = text.replaceAllMapped(RegExp(r'(<li>.*</li>\n?)+'), (Match m) => '<ul>${m.group(0)}</ul>');
+
+    // 引用
+    text = text.replaceAllMapped(RegExp(r'^>\s*(.+)$', multiLine: true), (Match m) => '<blockquote>${m.group(1)}</blockquote>');
+
+    // 段落化：未包裹的纯文本
+    final List<String> lines = text.split('\n');
+    final StringBuffer buffer = StringBuffer();
+    for (final String line in lines) {
+      final String trimmed = line.trim();
       if (trimmed.isEmpty) continue;
       if (trimmed.startsWith('<h') ||
           trimmed.startsWith('<pre') ||
           trimmed.startsWith('<ul') ||
           trimmed.startsWith('<ol') ||
           trimmed.startsWith('<blockquote') ||
-          trimmed.startsWith('<div class="math')) {
+          trimmed.startsWith('<div ')) {
         buffer.write(trimmed);
       } else if (!trimmed.startsWith('</')) {
         buffer.write('<p>$trimmed</p>');
@@ -260,60 +223,95 @@ class KatexPdfService {
   }
 
   /// 打开 WebView 打印对话框
-  Future<void> _openPrintDialog(BuildContext context, File htmlFile) async {
-    late WebViewController controller;
+  Future<void> _openPrintDialog(BuildContext context, String htmlContent) async {
+    bool hasError = false;
+
+    late final WebViewController controller;
     controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadFile(htmlFile.path);
+      ..setBackgroundColor(const Color(0xFFFFFFFF))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onWebResourceError: (_) {
+            hasError = true;
+          },
+        ),
+      )
+      ..loadHtmlString(htmlContent);
 
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('导出 PDF'),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.95,
-          height: MediaQuery.of(context).size.height * 0.75,
-          child: WebViewWidget(controller: controller),
+      builder: (BuildContext ctx) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Row(
+            children: <Widget>[
+              const Text('导出 PDF'),
+              const Spacer(),
+              if (hasError)
+                const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+            ],
+          ),
+          content: SizedBox(
+            width: MediaQuery.of(ctx).size.width * 0.95,
+            height: MediaQuery.of(ctx).size.height * 0.75,
+            child: Stack(
+              children: <Widget>[
+                WebViewWidget(controller: controller),
+                if (hasError)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      color: Colors.orange.shade50,
+                      child: const Row(
+                        children: <Widget>[
+                          Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '部分资源加载失败，但公式仍会尽力渲染。请点击下方打印按钮重试。',
+                              style: TextStyle(fontSize: 13, color: Colors.orange),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('关闭'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                await controller.runJavaScript('window.print();');
+              },
+              icon: const Icon(Icons.print),
+              label: const Text('打印/导出 PDF'),
+            ),
+          ],
         ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              // 执行打印脚本
-              await controller.runJavaScript('window.print();');
-            },
-            icon: const Icon(Icons.print),
-            label: const Text('打印/导出 PDF'),
-          ),
-        ],
       ),
     );
   }
 
-  /// 清理临时文件
-  Future<void> cleanup() async {
-    try {
-      final Directory tempDir = await getTemporaryDirectory();
-      final List<FileSystemEntity> files = tempDir.listSync();
-      for (final file in files) {
-        if (file is File && file.path.contains('mathmate_print_')) {
-          await file.delete();
-        }
-      }
-    } catch (e) {
-      debugPrint('Cleanup error: $e');
-    }
+  /// 清理缓存的 KaTeX（可选，释放内存）
+  static void clearCache() {
+    _cachedJs = null;
+    _cachedCss = null;
   }
 }
 
 class KatexPdfResult {
   final bool success;
   final String? error;
-  final String? pdfPath;
 
-  KatexPdfResult({required this.success, this.error, this.pdfPath});
+  KatexPdfResult({required this.success, this.error});
 }

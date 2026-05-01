@@ -88,6 +88,7 @@ flutter:
     - assets/visualization/jxg_engine.js
     - assets/visualization/jsxgraphcore.js
     - assets/geogebra/
+    - assets/katex/
     - assets/geogebra/css/
     - assets/geogebra/css/bundles/
     - assets/geogebra/web3d/

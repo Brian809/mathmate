@@ -44,6 +44,8 @@ css/z-index.css
 file_manifest.txt
 geometry.html
 graphing.html
+3d.html
+scientific.html
 pako.js
 platform.js
 web3d/0C7057AD68C986E5B1859BFB332A1012.cache.js

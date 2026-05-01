@@ -419,48 +419,82 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
     required String title,
     required String content,
     String emptyText = '暂无内容',
+    Color accentColor = const Color(0xFF3F51B5),
   }) {
     if (content.trim().isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.info_outline, size: 18, color: Colors.grey.shade400),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                emptyText,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              ),
             ),
-            child: Text(emptyText, style: const TextStyle(fontSize: 14)),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
     final List<Widget> blocks = _buildContentBlocks(content);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: accentColor, width: 4)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: blocks.length == 1 && blocks.first is Math
-              ? blocks.first
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: accentColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          blocks.length == 1 && blocks.first is Math
+              ? Center(child: blocks.first)
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: _mergeBlocksIntoLines(blocks),
                 ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -493,7 +527,10 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
   String? _getStepLabel(Widget w) {
     if (w is! Text) return null;
     final String t = (w.data ?? '').trim();
-    if (RegExp(r'^第\s*[一二三四五六七八九十百\d]+\s*步').hasMatch(t)) {
+    // 第X步 / 第 X 步 / Step X / 步骤X / 【第X步】 / X.  / (X)
+    if (RegExp(
+            r'^(第\s*[一二三四五六七八九十百\d]+\s*步|Step\s*\d+|步骤\s*\d+|【第|\(\d+\)|\d+\.\s)')
+        .hasMatch(t)) {
       return t;
     }
     return null;
@@ -559,10 +596,27 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
       }
     }
 
-    // 长公式包裹在水平滚动容器中，防止溢出
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: buildMath(),
+    // 长公式用 InteractiveViewer 支持缩放和平移
+    final Widget mathWidget = buildMath();
+    final double fontSizeValue = fontSize;
+    final double estimatedWidth = latex.length * fontSizeValue * 0.6;
+
+    if (estimatedWidth > 300) {
+      return InteractiveViewer(
+        panEnabled: true,
+        scaleEnabled: true,
+        minScale: 0.5,
+        maxScale: 2.5,
+        boundaryMargin: const EdgeInsets.all(40),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: mathWidget,
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: mathWidget,
     );
   }
 
@@ -736,38 +790,76 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
                           title: '题目内容',
                           content: _questionMarkdown,
                           emptyText: '题目识别为空',
+                          accentColor: const Color(0xFF5C6BC0),
                         ),
                         const SizedBox(height: 16),
                         _buildMarkdownBlock(
                           title: '解答过程',
                           content: _solutionMarkdown,
                           emptyText: '解题阶段未返回内容',
+                          accentColor: const Color(0xFF26A69A),
                         ),
                         const SizedBox(height: 20),
                         if (_formulaPreview != null) ...<Widget>[
-                          const Text(
-                            '公式预览（点击复制）',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: _copyFormula,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue[50],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Math.tex(
-                                  _formulaPreview!,
-                                  textStyle: const TextStyle(fontSize: 22),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3E5F5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCE93D8), width: 1),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  children: <Widget>[
+                                    const Icon(Icons.functions, size: 18, color: Color(0xFF7B1FA2)),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      '公式预览',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: Color(0xFF7B1FA2),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    GestureDetector(
+                                      onTap: _copyFormula,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF7B1FA2).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            Icon(Icons.copy, size: 14, color: Color(0xFF7B1FA2)),
+                                            SizedBox(width: 4),
+                                            Text('点击复制', style: TextStyle(fontSize: 12, color: Color(0xFF7B1FA2))),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                                const SizedBox(height: 12),
+                                Center(
+                                  child: InteractiveViewer(
+                                    panEnabled: true,
+                                    scaleEnabled: true,
+                                    minScale: 0.5,
+                                    maxScale: 3.0,
+                                    boundaryMargin: const EdgeInsets.all(40),
+                                    child: Math.tex(
+                                      _formulaPreview!,
+                                      textStyle: const TextStyle(fontSize: 22),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -813,18 +905,19 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
                               style: const TextStyle(color: Colors.blueGrey),
                             ),
                           ),
-                        const SizedBox(height: 20),
-                        Center(
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
                           child: ElevatedButton.icon(
                             onPressed: _exportPdf,
-                            icon: const Icon(Icons.picture_as_pdf),
-                            label: const Text('导出扫描锐化 PDF'),
+                            icon: const Icon(Icons.picture_as_pdf, size: 22),
+                            label: const Text('导出扫描锐化 PDF', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 28,
-                                vertical: 14,
-                              ),
-                              backgroundColor: Colors.blueAccent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: const Color(0xFF3F51B5),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 2,
                             ),
                           ),
                         ),

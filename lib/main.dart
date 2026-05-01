@@ -24,6 +24,7 @@ import 'package:mathmate/services/scanner_service.dart';
 import 'package:mathmate/services/theme_service.dart';
 import 'package:mathmate/services/video_recommendation_service.dart';
 import 'package:mathmate/theme/app_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -522,7 +523,7 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
               mainAxisSpacing: 10,
               childAspectRatio: 1.5,
             ),
-            itemCount: 3,
+            itemCount: 6,
             itemBuilder: (BuildContext context, int index) {
               final List<Map<String, dynamic>> tools = <Map<String, dynamic>>[
                 <String, dynamic>{
@@ -555,6 +556,38 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
                           appName: 'graphing',
                         ),
                       ),
+                    );
+                  },
+                },
+                <String, dynamic>{
+                  'icon': Icons.view_in_ar,
+                  'name': '3D视图',
+                  'onTap': () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GeogebraPage(appName: '3d'),
+                      ),
+                    );
+                  },
+                },
+                <String, dynamic>{
+                  'icon': Icons.science_outlined,
+                  'name': '科学计算器',
+                  'onTap': () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GeogebraPage(appName: 'scientific'),
+                      ),
+                    );
+                  },
+                },
+                <String, dynamic>{
+                  'icon': Icons.people_outline,
+                  'name': '社区资源',
+                  'onTap': () {
+                    launchUrl(
+                      Uri.parse('https://www.geogebra.org/materials'),
+                      mode: LaunchMode.externalApplication,
                     );
                   },
                 },
