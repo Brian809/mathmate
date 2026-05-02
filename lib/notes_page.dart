@@ -35,6 +35,7 @@ class _NotesPageState extends State<NotesPage> {
   Future<void> _loadNotesFromLocal() async {
     final prefs = await SharedPreferences.getInstance();
     final notesJson = prefs.getStringList('notes') ?? [];
+    if (!mounted) return;
     setState(() {
       allNotes = notesJson
           .map((jsonStr) => Note.fromJson(json.decode(jsonStr)))
@@ -87,6 +88,7 @@ class _NotesPageState extends State<NotesPage> {
       MaterialPageRoute(builder: (_) => const NoteEditorPage()),
     );
     if (result != null && result is Note) {
+      if (!mounted) return;
       setState(() {
         allNotes.insert(0, result);
         _searchController.clear();
@@ -104,6 +106,7 @@ class _NotesPageState extends State<NotesPage> {
     );
 
     if (result != null && result is Note) {
+      if (!mounted) return;
       setState(() {
         final originalIndex = allNotes.indexOf(note);
         if (originalIndex != -1) {
@@ -134,8 +137,9 @@ class _NotesPageState extends State<NotesPage> {
       ),
     );
 
-    if (confirm == true) {
+    if (confirm == true && index < filteredNotes.length) {
       final note = filteredNotes[index];
+      if (!mounted) return;
       setState(() => allNotes.remove(note));
       await _saveNotesToLocal();
       _filterNotes();
@@ -146,6 +150,7 @@ class _NotesPageState extends State<NotesPage> {
     final note = filteredNotes[index];
     setState(() {
       final originalIndex = allNotes.indexOf(note);
+      if (originalIndex == -1) return;
       allNotes[originalIndex] = Note(
         title: note.title,
         content: note.content,

@@ -125,8 +125,6 @@ class _MainScreenState extends State<MainScreen> {
             _currentIndex = index;
           });
         },
-        selectedItemColor: const Color(0xFF3F51B5),
-        unselectedItemColor: Colors.blueGrey.shade300,
         type: BottomNavigationBarType.fixed,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -155,6 +153,8 @@ class QuestionHomePage extends StatefulWidget {
 }
 
 class _QuestionHomePageState extends State<QuestionHomePage> {
+  ColorScheme get cs => Theme.of(context).colorScheme;
+
   final ScannerService _scannerService = ScannerService();
   final VideoRecommendationService _recommendationService = VideoRecommendationService();
   final TextEditingController _searchController = TextEditingController();
@@ -311,12 +311,12 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFF),
+      backgroundColor: cs.surface,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: const Color(0xFF3F51B5),
-          backgroundColor: Colors.white,
+          color: cs.primary,
+          backgroundColor: cs.surface,
           displacement: 40.0,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -362,19 +362,19 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const <BoxShadow>[
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Color(0x14000000),
+            color: cs.shadow,
             blurRadius: 12,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.search, color: Colors.blueGrey),
+          Icon(Icons.search, color: cs.onSurfaceVariant),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -412,13 +412,13 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const <BoxShadow>[
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Color(0x12000000),
+            color: cs.shadow.withValues(alpha: 0.07),
             blurRadius: 12,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -489,13 +489,13 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const <BoxShadow>[
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Color(0x12000000),
+            color: cs.shadow.withValues(alpha: 0.07),
             blurRadius: 12,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -600,7 +600,7 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
                 onTap: tool['onTap'] as VoidCallback,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: cs.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: FittedBox(
@@ -610,7 +610,7 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
                       children: <Widget>[
                         Icon(
                           tool['icon'] as IconData,
-                          color: const Color(0xFF3F51B5),
+                          color: cs.primary,
                           size: 22,
                         ),
                         const SizedBox(height: 2),
@@ -650,7 +650,7 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
     if (videos.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        child: const Text('下拉刷新获取推荐视频', style: TextStyle(color: Colors.grey)),
+        child: Text('下拉刷新获取推荐视频', style: TextStyle(color: cs.onSurfaceVariant)),
       );
     }
 
@@ -720,6 +720,8 @@ class _VideoCard extends StatefulWidget {
 }
 
 class _VideoCardState extends State<_VideoCard> {
+  ColorScheme get cs => Theme.of(context).colorScheme;
+
   String? _coverUrl;
   bool _coverLoaded = false;
 
@@ -786,12 +788,12 @@ class _VideoCardState extends State<_VideoCard> {
         width: 160,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: Colors.white,
-          boxShadow: const <BoxShadow>[
+          color: cs.surface,
+          boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Color(0x12000000),
+              color: cs.shadow.withValues(alpha: 0.07),
               blurRadius: 8,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -872,13 +874,13 @@ class _VideoCardState extends State<_VideoCard> {
 
   Widget _buildPlaceholder() {
     return Container(
-      color: const Color(0xFFE8EEFF),
+      color: cs.primaryContainer,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          const Icon(
+          Icon(
             Icons.video_library,
-            color: Color(0xFF3F51B5),
+            color: cs.primary,
             size: 40,
           ),
           const SizedBox(height: 4),
@@ -886,8 +888,8 @@ class _VideoCardState extends State<_VideoCard> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               widget.video.uploader,
-              style: const TextStyle(
-                color: Color(0xFF3F51B5),
+              style: TextStyle(
+                color: cs.primary,
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),

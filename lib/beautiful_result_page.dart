@@ -450,6 +450,7 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),

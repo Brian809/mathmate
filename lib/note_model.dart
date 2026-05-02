@@ -59,7 +59,7 @@ class Note {
     return Note(
       title: json['title'] ?? '',
       content: json['content'] ?? '',
-      createTime: DateTime.parse(json['createTime']),
+      createTime: DateTime.parse(json['createTime'] ?? DateTime.now().toIso8601String()),
       updateTime: DateTime.parse(json['updateTime'] ?? json['createTime']),
       textColor: Color(
         int.parse(json['textColor'] ?? Colors.black.value.toString()),

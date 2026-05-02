@@ -81,6 +81,7 @@ class ScannerService {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext context) {
+        final ColorScheme cs = Theme.of(context).colorScheme;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -91,14 +92,14 @@ class ScannerService {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: cs.onSurfaceVariant,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   '选择图片来源',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: cs.onSurface),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
@@ -106,16 +107,16 @@ class ScannerService {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8EEFF),
+                      color: cs.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.camera_alt_rounded,
-                      color: Color(0xFF3F51B5),
+                      color: cs.primary,
                     ),
                   ),
-                  title: const Text('拍照'),
-                  subtitle: const Text('使用相机拍摄题目'),
+                  title: Text('拍照', style: TextStyle(color: cs.onSurface)),
+                  subtitle: Text('使用相机拍摄题目', style: TextStyle(color: cs.onSurfaceVariant)),
                   onTap: () => Navigator.pop(context, ImageSource.camera),
                 ),
                 ListTile(
@@ -123,16 +124,16 @@ class ScannerService {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8EEFF),
+                      color: cs.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.photo_library_rounded,
-                      color: Color(0xFF3F51B5),
+                      color: cs.primary,
                     ),
                   ),
-                  title: const Text('从相册选择'),
-                  subtitle: const Text('从相册中选取图片'),
+                  title: Text('从相册选择', style: TextStyle(color: cs.onSurface)),
+                  subtitle: Text('从相册中选取图片', style: TextStyle(color: cs.onSurfaceVariant)),
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
                 ),
                 const SizedBox(height: 8),

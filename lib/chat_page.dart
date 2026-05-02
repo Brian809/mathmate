@@ -541,6 +541,7 @@ class _ChatPageState extends State<ChatPage> {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.78,
               ),
+              clipBehavior: Clip.hardEdge,
               decoration: BoxDecoration(
                 color: cs.surface,
                 borderRadius: const BorderRadius.only(
@@ -647,6 +648,7 @@ class _ChatPageState extends State<ChatPage> {
                     constraints: BoxConstraints(
                       maxWidth: MediaQuery.of(context).size.width * 0.78,
                     ),
+                    clipBehavior: Clip.hardEdge,
                     decoration: BoxDecoration(
                       color: isUser ? cs.primary : cs.surface,
                       borderRadius: BorderRadius.only(

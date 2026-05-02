@@ -82,6 +82,12 @@ class KatexPdfService {
     .warning-box { background: #FFF3E0; border-left: 4px solid #FF9800; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
     .analysis-box { background: #E3F2FD; border-left: 4px solid #2196F3; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
     .render-error { color: #999; font-style: italic; }
+    .katex-display { overflow-x: auto; overflow-y: hidden; }
+    .katex-display > .katex { white-space: nowrap; }
+    pre { overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    pre code { white-space: pre-wrap; }
+    table { display: block; max-width: 100%; overflow-x: auto; }
+    code { white-space: break-spaces; }
     @page { margin: 15mm; }
     @media print {
       body { padding: 0; max-width: none; }
@@ -110,8 +116,12 @@ class KatexPdfService {
           el.innerHTML = '<span class="render-error">[公式渲染失败]</span>';
         }
       });
-      // 即使部分公式失败也触发打印
-      setTimeout(function() { window.print(); }, 600);
+      // 等待两帧确保 KaTeX 渲染 + 布局完成后再触发打印
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          window.print();
+        });
+      });
     })();
   </script>
 </body>

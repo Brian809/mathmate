@@ -355,6 +355,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     _tagController = TextEditingController();
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text("添加标签"),
@@ -370,7 +371,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
             ),
             TextButton(
               onPressed: () {
-                final tag = _tagController!.text.trim();
+                final tag = (_tagController?.text ?? '').trim();
                 if (tag.isNotEmpty && !_tags.contains(tag))
                   setState(() => _tags.add(tag));
                 Navigator.pop(dialogContext);

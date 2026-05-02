@@ -352,7 +352,7 @@ var codebase = "";
 		if (location.hash.length || (path != '/apps' && path != '/apps/' && !path.match(/\.html$/))) {
 			return location.hash.length ? location.hash.replace('#','') : path;
 		}
-		return window.appID;
+		return false;
 	}
 
 	function resizeStart(){
