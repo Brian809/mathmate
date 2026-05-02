@@ -21,6 +21,7 @@ import 'package:mathmate/profile_page.dart';
 import 'package:mathmate/scanner/enhanced_crop_page.dart';
 import 'package:mathmate/services/scanner_service.dart';
 import 'package:mathmate/services/theme_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:mathmate/services/video_recommendation_service.dart';
 import 'package:mathmate/theme/app_theme.dart';
 
@@ -571,12 +572,12 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
                   },
                 },
                 <String, dynamic>{
-                  'icon': Icons.grid_view_rounded,
-                  'name': '计算器套件',
+                  'icon': Icons.draw_outlined,
+                  'name': '尺规作图',
                   'onTap': () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const GeogebraPage(appName: 'suite'),
+                        builder: (_) => const GeogebraPage(appName: 'notes'),
                       ),
                     );
                   },
@@ -623,6 +624,20 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
                 ),
               );
             },
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                launchUrl(
+                  Uri.parse('https://www.geogebra.org/materials'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+              icon: const Icon(Icons.people_outline, size: 18),
+              label: const Text('GeoGebra 社区'),
+            ),
           ),
         ],
       ),

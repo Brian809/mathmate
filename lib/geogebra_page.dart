@@ -34,8 +34,8 @@ class _GeogebraPageState extends State<GeogebraPage> {
         return '3D视图';
       case 'scientific':
         return '科学计算器';
-      case 'suite':
-        return '计算器套件';
+      case 'notes':
+        return '尺规作图';
       case 'probability':
         return '概率模型';
       default:
@@ -54,8 +54,8 @@ class _GeogebraPageState extends State<GeogebraPage> {
         return '3d.html';
       case 'scientific':
         return 'scientific.html';
-      case 'suite':
-        return 'suite.html';
+      case 'notes':
+        return 'notes.html';
       case 'probability':
         return 'probability.html';
       default:

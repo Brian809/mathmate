@@ -48,6 +48,7 @@ graphing.html
 scientific.html
 suite.html
 probability.html
+notes.html
 pako.js
 platform.js
 web3d/0C7057AD68C986E5B1859BFB332A1012.cache.js
