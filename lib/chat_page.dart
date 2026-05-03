@@ -824,70 +824,67 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildInputBar() {
     final ColorScheme cs = Theme.of(context).colorScheme;
     final bool hasText = _inputController.text.trim().isNotEmpty;
-    return Hero(
-      tag: 'search-to-chat',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: cs.shadow,
-              blurRadius: 12,
-              offset: const Offset(0, 3),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: cs.shadow,
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.search, color: cs.onSurfaceVariant),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _inputController,
+                focusNode: _inputFocus,
+                maxLines: 4,
+                minLines: 1,
+                textInputAction: TextInputAction.newline,
+                readOnly: _isLoading,
+                style: TextStyle(color: cs.onSurface),
+                decoration: InputDecoration(
+                  hintText: '输入数学问题...',
+                  hintStyle: TextStyle(
+                      color: cs.onSurface.withValues(alpha: 0.4)),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: hasText && !_isLoading ? () => _sendMessage() : null,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: hasText && !_isLoading
+                      ? cs.primary
+                      : cs.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _isLoading ? Icons.hourglass_top : Icons.send_rounded,
+                  color: hasText && !_isLoading
+                      ? cs.onPrimary
+                      : cs.onSurface.withValues(alpha: 0.3),
+                  size: 18,
+                ),
+              ),
             ),
           ],
-        ),
-        child: SafeArea(
-          child: Row(
-            children: <Widget>[
-              Icon(Icons.search, color: cs.onSurfaceVariant),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _inputController,
-                  focusNode: _inputFocus,
-                  maxLines: 4,
-                  minLines: 1,
-                  textInputAction: TextInputAction.newline,
-                  readOnly: _isLoading,
-                  style: TextStyle(color: cs.onSurface),
-                  decoration: InputDecoration(
-                    hintText: '输入数学问题...',
-                    hintStyle: TextStyle(
-                        color: cs.onSurface.withValues(alpha: 0.4)),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: hasText && !_isLoading ? () => _sendMessage() : null,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: hasText && !_isLoading
-                        ? cs.primary
-                        : cs.surfaceContainerHighest,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _isLoading ? Icons.hourglass_top : Icons.send_rounded,
-                    color: hasText && !_isLoading
-                        ? cs.onPrimary
-                        : cs.onSurface.withValues(alpha: 0.3),
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

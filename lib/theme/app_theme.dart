@@ -26,6 +26,13 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.07),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide.none,
+        ),
+        surfaceTintColor: Colors.transparent,
+      ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: scheme.surface,
         selectedItemColor: scheme.primary,
@@ -54,6 +61,13 @@ class AppTheme {
         elevation: 2,
         shadowColor: Colors.black.withValues(alpha: 0.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide.none,
+        ),
+        surfaceTintColor: Colors.transparent,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: scheme.surface,

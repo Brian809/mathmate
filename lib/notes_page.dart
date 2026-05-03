@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
-import 'package:open_file/open_file.dart';
 import 'package:path/path.dart' as p;
 import 'note_editor_page.dart';
 import 'note_handwriting_editor_page.dart';
 import 'note_model.dart';
+import 'pdf_viewer_page.dart';
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
@@ -106,18 +106,28 @@ class _NotesPageState extends State<NotesPage> {
     await File(srcPath).copy(destPath);
 
     if (!mounted) return;
+    final note = Note(
+      title: p.basenameWithoutExtension(fileName),
+      content: '',
+      createTime: DateTime.now(),
+      updateTime: DateTime.now(),
+      noteType: 'pdf',
+      pdfPath: destPath,
+    );
     setState(() {
-      allNotes.insert(0, Note(
-        title: p.basenameWithoutExtension(fileName),
-        content: '',
-        createTime: DateTime.now(),
-        updateTime: DateTime.now(),
-        noteType: 'pdf',
-        pdfPath: destPath,
-      ));
+      allNotes.insert(0, note);
     });
     await _saveNotesToLocal();
     _filterNotes();
+
+    // 导入后直接进入编辑界面
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PdfViewerPage(pdfPath: destPath, title: note.title),
+      ),
+    );
   }
 
   Future<void> _createNewNote({bool handwriting = false}) async {
@@ -144,7 +154,12 @@ class _NotesPageState extends State<NotesPage> {
     final note = filteredNotes[index];
     if (note.noteType == 'pdf') {
       if (note.pdfPath.isNotEmpty && File(note.pdfPath).existsSync()) {
-        await OpenFile.open(note.pdfPath);
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PdfViewerPage(pdfPath: note.pdfPath, title: note.title),
+          ),
+        );
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -39,16 +40,44 @@ class HandwritingStroke {
   }
 }
 
+class RecognizedBlock {
+  String text;
+  Offset position;
+  double scale;
+
+  RecognizedBlock({required this.text, this.position = Offset.zero, this.scale = 1.0});
+
+  Map<String, dynamic> toJson() => {
+        'text': text,
+        'dx': position.dx,
+        'dy': position.dy,
+        'scale': scale,
+      };
+
+  static RecognizedBlock fromJson(Map<String, dynamic> json) {
+    return RecognizedBlock(
+      text: json['text'] as String? ?? '',
+      position: Offset(
+        (json['dx'] as num?)?.toDouble() ?? 0,
+        (json['dy'] as num?)?.toDouble() ?? 0,
+      ),
+      scale: (json['scale'] as num?)?.toDouble() ?? 1.0,
+    );
+  }
+}
+
 class PaperPage {
   List<HandwritingStroke> strokes = [];
   List<Offset> currentPoints = [];
   String recognizedText = '';
+  List<RecognizedBlock> recognizedBlocks = [];
   PaperBackground background = PaperBackground.blank;
   double bgSpacing = 30.0;
 
   Map<String, dynamic> toJson() => {
         'strokes': strokes.map((s) => s.toJson()).toList(),
         'recognizedText': recognizedText,
+        'recognizedBlocks': recognizedBlocks.map((b) => b.toJson()).toList(),
         'background': background.index,
         'bgSpacing': bgSpacing,
       };
@@ -60,6 +89,10 @@ class PaperPage {
             .toList() ??
         [];
     page.recognizedText = json['recognizedText'] as String? ?? '';
+    page.recognizedBlocks = (json['recognizedBlocks'] as List?)
+            ?.map((b) => RecognizedBlock.fromJson(b as Map<String, dynamic>))
+            .toList() ??
+        [];
     page.background = PaperBackground.values[json['background'] as int? ?? 0];
     page.bgSpacing = (json['bgSpacing'] as num?)?.toDouble() ?? 30.0;
     return page;
@@ -116,16 +149,14 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
 
   // 识别面板控制
   bool _showRecognitionPanel = false;
+  bool _isPanelCollapsed = false;
   final DraggableScrollableController _panelController = DraggableScrollableController();
 
   // 公式分析状态
   String? _analyzingFormula;
   final Map<String, _FormulaAnalysis> _analysisCache = {};
 
-  final List<Color> _colors = [
-    Colors.black, Colors.redAccent, Colors.blueAccent,
-    Colors.green, Colors.orange, Colors.purple, Colors.brown,
-  ];
+  bool _enableVisualization = false;
 
   @override
   void initState() {
@@ -342,8 +373,22 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
         Uint8List pngBytes = byteData.buffer.asUint8List();
         final result = await _ocrService.recognize(pngBytes);
         if (mounted) {
+          // 将识别结果解析为 RecognizedBlock 列表
+          final blocks = <RecognizedBlock>[];
+          double yOffset = 0;
+          for (final line in result.split('\n')) {
+            final trimmed = line.trim();
+            if (trimmed.isEmpty) continue;
+            blocks.add(RecognizedBlock(
+              text: trimmed,
+              position: Offset(20, yOffset),
+              scale: 1.0,
+            ));
+            yOffset += 48;
+          }
           setState(() {
             _currentPage.recognizedText = result;
+            _currentPage.recognizedBlocks = blocks;
             _showRecognitionPanel = true;
           });
         }
@@ -426,7 +471,7 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
                   )
                 : Text(line, style: const TextStyle(fontSize: 16)),
           ),
-          if (isLatex)
+          if (isLatex && _enableVisualization)
             GestureDetector(
               onTap: isAnalyzing ? null : () => _analyzeFormula(line),
               child: Container(
@@ -586,11 +631,11 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
   Widget _buildDraggablePanel() {
     return DraggableScrollableSheet(
       controller: _panelController,
-      initialChildSize: 0.35,
-      minChildSize: 0.12,
+      initialChildSize: _isPanelCollapsed ? 0.08 : 0.35,
+      minChildSize: 0.08,
       maxChildSize: 0.75,
       snap: true,
-      snapSizes: const [0.12, 0.35, 0.75],
+      snapSizes: const [0.08, 0.35, 0.75],
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -608,7 +653,7 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
             children: [
               // 拖动手柄 + 标题栏
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -623,11 +668,12 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.auto_awesome, size: 16, color: cs.primary),
                             const SizedBox(width: 6),
@@ -638,10 +684,64 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
                           ],
                         ),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            // 收起/展开按钮
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isPanelCollapsed = !_isPanelCollapsed;
+                                  if (_isPanelCollapsed) {
+                                    _panelController.animateTo(
+                                      0.08,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  } else {
+                                    _panelController.animateTo(
+                                      0.35,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  }
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: cs.surfaceContainerHighest,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _isPanelCollapsed ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                  size: 20, color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            // 可视化开关（仅展开时显示）
+                            if (!_isPanelCollapsed)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('动图', style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                                  SizedBox(
+                                    height: 24,
+                                    child: Switch(
+                                      value: _enableVisualization,
+                                      onChanged: (v) => setState(() => _enableVisualization = v),
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            const SizedBox(width: 4),
                             // 关闭面板
                             GestureDetector(
-                              onTap: () => setState(() => _showRecognitionPanel = false),
+                              onTap: () => setState(() {
+                                _showRecognitionPanel = false;
+                                _isPanelCollapsed = false;
+                              }),
                               child: Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
@@ -658,16 +758,17 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
                   ],
                 ),
               ),
-              // 内容区域
-              Expanded(
-                child: _isRecognizing
-                    ? const Center(child: CircularProgressIndicator())
-                    : SingleChildScrollView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        child: _buildRecognizedContent(_currentPage.recognizedText),
-                      ),
-              ),
+              // 内容区域（收起时隐藏）
+              if (!_isPanelCollapsed)
+                Expanded(
+                  child: _isRecognizing
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          child: _buildRecognizedContent(_currentPage.recognizedText),
+                        ),
+                ),
             ],
           ),
         );
@@ -683,6 +784,60 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
         child: Stack(
           children: [
             Positioned.fill(child: Container(color: cs.surfaceContainerLowest)),
+            // 左侧翻页按钮
+            if (_pages.length > 1)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 40,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _currentPageIndex > 0 ? () => _goToPage(_currentPageIndex - 1) : null,
+                    child: Container(
+                      width: 32, height: 48,
+                      decoration: BoxDecoration(
+                        color: _currentPageIndex > 0
+                            ? cs.primary.withValues(alpha: 0.15)
+                            : Colors.grey.withValues(alpha: 0.05),
+                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(12)),
+                      ),
+                      child: Icon(
+                        Icons.chevron_left,
+                        color: _currentPageIndex > 0 ? cs.primary : Colors.grey.withValues(alpha: 0.3),
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // 右侧翻页按钮
+            if (_pages.length > 1)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 40,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _currentPageIndex < _pages.length - 1
+                        ? () => _goToPage(_currentPageIndex + 1) : null,
+                    child: Container(
+                      width: 32, height: 48,
+                      decoration: BoxDecoration(
+                        color: _currentPageIndex < _pages.length - 1
+                            ? cs.primary.withValues(alpha: 0.15)
+                            : Colors.grey.withValues(alpha: 0.05),
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                      ),
+                      child: Icon(
+                        Icons.chevron_right,
+                        color: _currentPageIndex < _pages.length - 1
+                            ? cs.primary : Colors.grey.withValues(alpha: 0.3),
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               bottom: 8, left: 0, right: 0,
               child: Center(
@@ -737,6 +892,9 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
                 ),
               ),
             ),
+            // 浮动 KaTeX 识别卡片（在画布上层，独立拖动）
+            if (_currentPage.recognizedBlocks.isNotEmpty)
+              ..._buildFloatingBlocks(),
             // 右上角面板开关浮钮
             if (!_showRecognitionPanel && _currentPage.recognizedText.isNotEmpty)
               Positioned(
@@ -766,6 +924,57 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
       widgets.add(_buildFormulaRow(line));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+  }
+
+  List<Widget> _buildFloatingBlocks() {
+    return _currentPage.recognizedBlocks.asMap().entries.map((entry) {
+      final block = entry.value;
+      final isLatex = block.text.contains(r'\') || block.text.contains('^') ||
+          block.text.contains('_') || block.text.contains('{');
+      final screenX = 8 + _paperOffset.dx + block.position.dx * _scale;
+      final screenY = 8 + _paperOffset.dy + block.position.dy * _scale;
+
+      return Positioned(
+        left: screenX,
+        top: screenY,
+        child: Transform.scale(
+          scale: _scale * block.scale,
+          alignment: Alignment.topLeft,
+          child: GestureDetector(
+            onPanUpdate: (details) {
+              setState(() {
+                block.position = Offset(
+                  block.position.dx + details.delta.dx / _scale,
+                  block.position.dy + details.delta.dy / _scale,
+                );
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: cs.primary.withValues(alpha: 0.4)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 8, offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: isLatex
+                  ? Math.tex(
+                      block.text,
+                      textStyle: const TextStyle(fontSize: 16),
+                      onErrorFallback: (err) => Text(block.text,
+                          style: const TextStyle(fontSize: 14, color: Colors.blue)),
+                    )
+                  : Text(block.text, style: const TextStyle(fontSize: 16)),
+            ),
+          ),
+        ),
+      );
+    }).toList();
   }
 
   Widget _buildToolbar() {
@@ -822,11 +1031,10 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
             IconButton(icon: const Icon(Icons.undo, size: 22), tooltip: "撤销", onPressed: _undo),
             IconButton(icon: const Icon(Icons.delete_outline, size: 22), tooltip: "清空", onPressed: _clear),
             _divider(),
-            if (_canvasMode != CanvasMode.eraser)
-              ..._colors.map((c) => Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: _buildColorBtn(c),
-                  )),
+            if (_canvasMode != CanvasMode.eraser) ...[
+              _buildColorPaletteBtn(),
+              const SizedBox(width: 4),
+            ],
           ]),
         ),
       ),
@@ -888,20 +1096,271 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
     );
   }
 
-  Widget _buildColorBtn(Color color) {
-    final isSelected = _selectedColor == color;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedColor = color),
+  Widget _buildColorPaletteBtn() {
+    return InkWell(
+      onTap: () => _showRingColorPicker(),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        width: 28, height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: color, shape: BoxShape.circle,
-          border: Border.all(color: isSelected ? cs.onSurface : Colors.transparent, width: 2),
-          boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 4)] : null,
+          color: _selectedColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: cs.outlineVariant, width: 1),
         ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.palette, size: 16, color: _selectedColor.computeLuminance() > 0.5 ? Colors.black : Colors.white),
+          const SizedBox(width: 4),
+          Text('调色盘', style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w600,
+            color: _selectedColor.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+          )),
+        ]),
       ),
     );
   }
+
+  void _showRingColorPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return _RingColorPickerWidget(
+          initialColor: _selectedColor,
+          onColorChanged: (color) {
+            setState(() => _selectedColor = color);
+          },
+          onConfirm: () {
+            Navigator.pop(ctx);
+          },
+          cs: cs,
+        );
+      },
+    );
+  }
+}
+
+// 环形渐变取色器
+class _RingColorPickerWidget extends StatefulWidget {
+  final Color initialColor;
+  final ValueChanged<Color> onColorChanged;
+  final VoidCallback onConfirm;
+  final ColorScheme cs;
+
+  const _RingColorPickerWidget({
+    required this.initialColor,
+    required this.onColorChanged,
+    required this.onConfirm,
+    required this.cs,
+  });
+
+  @override
+  State<_RingColorPickerWidget> createState() => _RingColorPickerWidgetState();
+}
+
+class _RingColorPickerWidgetState extends State<_RingColorPickerWidget> {
+  late double _hue;
+  late double _saturation;
+  double _brightness = 1.0;
+  Color _currentColor = Colors.black;
+
+  @override
+  void initState() {
+    super.initState();
+    final hsv = HSVColor.fromColor(widget.initialColor);
+    _hue = hsv.hue / 360;
+    _saturation = hsv.saturation;
+    _brightness = hsv.value;
+    _currentColor = widget.initialColor;
+  }
+
+  Color _hsvToColor(double h, double s, double v) {
+    return HSVColor.fromAHSV(1, h * 360, s.clamp(0.0, 1.0), v.clamp(0.0, 1.0)).toColor();
+  }
+
+  void _onPickerTap(Offset localPos, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final dx = localPos.dx - center.dx;
+    final dy = localPos.dy - center.dy;
+    final distance = (dx * dx + dy * dy).clamp(0.0, double.infinity);
+    final radius = size.width / 2;
+
+    // 如果在圆形外，忽略
+    if (distance > radius * radius) return;
+
+    // 角度 → 色相
+    final angle = (atan2(dy, dx) + pi) / (2 * pi); // 0..1
+    // 距离 → 饱和度 (中心=0, 边缘=1)
+    final dist = sqrt(distance) / radius;
+
+    setState(() {
+      _hue = angle;
+      _saturation = dist.clamp(0.0, 1.0);
+      _currentColor = _hsvToColor(_hue, _saturation, _brightness);
+      widget.onColorChanged(_currentColor);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 拖动指示条
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: widget.cs.onSurfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text('取色器', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: widget.cs.onSurface)),
+          const SizedBox(height: 16),
+          // 环形渐变取色盘
+          GestureDetector(
+            onTapDown: (details) => _onPickerTap(details.localPosition, const Size(280, 280)),
+            onPanUpdate: (details) => _onPickerTap(details.localPosition, const Size(280, 280)),
+            child: Center(
+              child: SizedBox(
+                width: 280, height: 280,
+                child: CustomPaint(
+                  painter: _RingPainter(hue: _hue, saturation: _saturation),
+                  child: Center(
+                    child: Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        color: _currentColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // 明度滑块
+          Row(
+            children: [
+              Text('明度', style: TextStyle(fontSize: 12, color: widget.cs.onSurfaceVariant)),
+              Expanded(
+                child: Slider(
+                  value: _brightness, min: 0, max: 1,
+                  activeColor: _currentColor,
+                  onChanged: (v) {
+                    setState(() {
+                      _brightness = v;
+                      _currentColor = _hsvToColor(_hue, _saturation, _brightness);
+                      widget.onColorChanged(_currentColor);
+                    });
+                  },
+                ),
+              ),
+              Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: widget.cs.outlineVariant),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 当前颜色预览 + 确认按钮
+          Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  color: _currentColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: widget.cs.outlineVariant, width: 2),
+                  boxShadow: [BoxShadow(color: _currentColor.withValues(alpha: 0.4), blurRadius: 8)],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  '#${_currentColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                  style: TextStyle(fontSize: 14, fontFamily: 'monospace', color: widget.cs.onSurface),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: widget.onConfirm,
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  final double hue;
+  final double saturation;
+
+  _RingPainter({required this.hue, required this.saturation});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // 绘制色相+饱和度圆盘
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // 绘制多个扇区来近似色相环
+    const int segments = 360;
+    for (int i = 0; i < segments; i++) {
+      final startAngle = i * 2 * pi / segments;
+      final hueColor = HSVColor.fromAHSV(1, i.toDouble(), 1, 1).toColor();
+
+      final path = Path();
+      path.moveTo(center.dx, center.dy);
+      path.arcTo(rect, startAngle * 180 / pi, 360 / segments, false);
+      path.close();
+
+      // 径向渐变：中心白色 → 边缘纯色相
+      final gradient = RadialGradient(
+        center: Alignment.center,
+        radius: 1.0,
+        colors: [Colors.white, hueColor],
+        stops: const [0.0, 1.0],
+      );
+
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..shader = gradient.createShader(rect),
+      );
+    }
+
+    // 绘制外边框
+    canvas.drawCircle(
+      center, radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = Colors.grey.withValues(alpha: 0.3)
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter oldDelegate) =>
+      hue != oldDelegate.hue || saturation != oldDelegate.saturation;
 }
 
 // 公式分析结果

@@ -34,7 +34,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: 'https://nsetgslkaocosehsbqcy.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXRnc2xrYW9jb3NlaHNicWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwNjQ4MDAsImV4cCI6MjA1ODY0MDgwMH0.placeholder',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZXRnc2xrYW9jb3NlaHNicWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODQ0MzAsImV4cCI6MjA5MzM2MDQzMH0.30FRbdCsoa4WN6oahQy7JJFt3i_2850CEy0zHEC1M7s',
   );
 
   final bool isFirst = await HistoryRepository.instance.isFirstLaunch();
@@ -361,53 +361,50 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
   }
 
   Widget _buildSearchBar() {
-    return Hero(
-      tag: 'search-to-chat',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: cs.shadow,
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: <Widget>[
-            Icon(Icons.search, color: cs.onSurfaceVariant),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  hintText: '搜索题目或问蓝心助手...',
-                  border: InputBorder.none,
-                ),
-                onSubmitted: (_) => _openSearchChat(),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: cs.shadow,
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.search, color: cs.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: '搜索题目或问蓝心助手...',
+                border: InputBorder.none,
               ),
+              onSubmitted: (_) => _openSearchChat(),
             ),
-            IconButton(
-              onPressed: () {
-                Navigator.of(context).push(_ChatTransitionRoute(
-                  targetPage: const ChatHomePage(),
-                ));
-              },
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
-            ),
-            IconButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const HistoryListPage()),
-                );
-              },
-              icon: const Icon(Icons.history_rounded),
-            ),
-          ],
-        ),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(_ChatTransitionRoute(
+                targetPage: const ChatHomePage(),
+              ));
+            },
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HistoryListPage()),
+              );
+            },
+            icon: const Icon(Icons.history_rounded),
+          ),
+        ],
       ),
     );
   }
