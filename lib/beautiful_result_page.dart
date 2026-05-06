@@ -12,9 +12,10 @@ import 'package:mathmate/models/pipeline_models.dart';
 import 'package:mathmate/models/pipeline_stage.dart';
 import 'package:mathmate/services/math_pipeline_service.dart';
 import 'package:mathmate/visualization/geometry_validator.dart';
-import 'package:mathmate/visualization_page.dart';
-import 'package:mathmate/visualization/jxg_webview.dart';
+import 'package:mathmate/visualization/models.dart';
+import 'package:mathmate/visualization/geometry_painter.dart';
 import 'package:mathmate/visualization/safe_json_parser.dart';
+import 'package:mathmate/visualization_page.dart';
 import 'package:mathmate/services/katex_pdf_service.dart';
 
 class BeautifulResultPage extends StatefulWidget {
@@ -162,8 +163,8 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
     if (normalizedScene != null) {
       final GeometryValidationResult validation = const GeometryValidator()
           .validate(normalizedScene);
-      if (validation.isValid && validation.scene != null) {
-        validatedScene = validation.scene!.toJson();
+      if (validation.isValid) {
+        validatedScene = normalizedScene;
       } else {
         geometryMessage = validation.error ?? '历史几何数据校验失败。';
       }
@@ -873,15 +874,11 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
                             borderRadius: BorderRadius.circular(12),
                             child: SizedBox(
                               height: 300,
-                              child: JxgWebView(
-                                scene: _geometryScene!,
-                                onEngineError: (msg) {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('可视化加载失败: $msg')),
-                                    );
-                                  }
-                                },
+                              child: CustomPaint(
+                                size: Size.infinite,
+                                painter: GeometryPainter(
+                                  scene: SafeJsonParser.parseSceneFromMap(_geometryScene!),
+                                ),
                               ),
                             ),
                           ),

@@ -85,9 +85,6 @@ flutter:
     - .env
     - assets/app_icon_final.png
     - assets/fonts/simhei.ttf
-    - assets/visualization/index.html
-    - assets/visualization/jxg_engine.js
-    - assets/visualization/jsxgraphcore.js
     - assets/geogebra/
     - assets/katex/
     - assets/geogebra/css/

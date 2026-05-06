@@ -45,7 +45,7 @@ class VisualizationService {
         }
         final GeometryValidationResult validation =
             const GeometryValidator().validate(decoded);
-        if (!validation.isValid || validation.scene == null) {
+        if (!validation.isValid) {
           return VisualizeResult(
             scene: null,
             rawOutput: raw,
@@ -53,7 +53,7 @@ class VisualizationService {
           );
         }
         return VisualizeResult(
-          scene: validation.scene!.toJson(),
+          scene: decoded, // 存储原始 Map，渲染时再解析为 GeometryScene
           rawOutput: raw,
         );
       } catch (e) {
