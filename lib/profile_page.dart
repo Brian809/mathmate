@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:mathmate/about_mathmate_page.dart';
 import 'package:mathmate/account_settings_page.dart';
+import 'package:mathmate/data/history_repository.dart';
 import 'package:mathmate/grade_selection_page.dart';
 import 'package:mathmate/help_support_page.dart';
 import 'package:mathmate/history_list_page.dart';
 import 'package:mathmate/services/theme_service.dart';
 import 'package:mathmate/services/user_profile_service.dart';
+import 'package:mathmate/tutorial_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -97,6 +99,18 @@ class _ProfilePageState extends State<ProfilePage> {
                       if (result != null && mounted) {
                         setState(() {});
                       }
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _MenuCard(
+                    icon: Icons.menu_book_outlined,
+                    title: '新手引导',
+                    onTap: () async {
+                      await HistoryRepository.instance.resetTutorial();
+                      if (!context.mounted) return;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TutorialPage()),
+                      );
                     },
                   ),
                   const SizedBox(height: 10),
