@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mathmate/models/pipeline_models.dart';
 import 'package:mathmate/models/pipeline_stage.dart';
@@ -29,8 +30,11 @@ class MathPipelineService {
 
     try {
       onStageChanged?.call(PipelineStage.recognizing);
+      debugPrint('[Pipeline] 开始识别阶段...');
       recognize = await _ocrService.recognizeQuestionFromImage(image);
+      debugPrint('[Pipeline] 识别完成: ${recognize.questionMarkdown.length} 字符');
     } catch (e) {
+      debugPrint('[Pipeline] 识别阶段失败: $e');
       stageErrors.add('识别阶段失败: $e');
       onStageChanged?.call(PipelineStage.failed);
       return PipelineResult(
@@ -43,10 +47,13 @@ class MathPipelineService {
 
     try {
       onStageChanged?.call(PipelineStage.solving);
+      debugPrint('[Pipeline] 开始解题阶段...');
       solve = await _solverService.solveQuestionMarkdown(
         recognize.questionMarkdown,
       );
+      debugPrint('[Pipeline] 解题完成: ${solve.solutionMarkdown.length} 字符');
     } catch (e) {
+      debugPrint('[Pipeline] 解题阶段失败: $e');
       stageErrors.add('解题阶段失败: $e');
       onStageChanged?.call(PipelineStage.failed);
       return PipelineResult(

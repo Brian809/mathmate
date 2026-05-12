@@ -1,32 +1,29 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'dart:io';
 
-/// KaTeX + WebView PDF 导出服务
-/// 使用内嵌 KaTeX 渲染公式（无需网络），通过系统打印对话框导出 PDF
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+/// KaTeX HTML 导出服务
+/// 使用内嵌 KaTeX 渲染公式（无需网络），生成自包含 HTML 文件并分享到本地
 class KatexPdfService {
   static String? _cachedJs;
   static String? _cachedCss;
 
-  /// 导出 PDF - 在 WebView 中预览，点击打印按钮触发系统打印
+  /// 导出 HTML 文件 - 保存到临时目录并通过系统分享对话框分享
   Future<KatexPdfResult> exportToPdf({
     required String title,
     required String content,
-    required BuildContext context,
     String subtitle = '由 MathMate 生成',
   }) async {
     try {
-      // 确保 KaTeX JS/CSS 已缓存
       await _ensureKatexLoaded();
 
-      // 生成 HTML 内容（内嵌 KaTeX）
       final String htmlContent = _generateHtml(title, subtitle, content);
+      final String filePath = await _saveHtmlFile(title, htmlContent);
+      await _shareFile(filePath);
 
-      if (context.mounted) {
-        await _openPrintDialog(context, htmlContent);
-      }
-
-      return KatexPdfResult(success: true);
+      return KatexPdfResult(success: true, filePath: filePath);
     } catch (e) {
       return KatexPdfResult(success: false, error: e.toString());
     }
@@ -36,7 +33,27 @@ class KatexPdfService {
   Future<void> _ensureKatexLoaded() async {
     if (_cachedJs != null && _cachedCss != null) return;
     _cachedJs ??= await rootBundle.loadString('assets/katex/katex.min.js');
-    _cachedCss ??= await rootBundle.loadString('assets/katex/katex.min.css');
+    String rawCss = await rootBundle.loadString('assets/katex/katex.min.css');
+    // 移除 @font-face 规则——本地 HTML 没有字体文件路径
+    _cachedCss = rawCss.replaceAll(RegExp(r'@font-face\{[^}]*\}'), '');
+  }
+
+  /// 保存 HTML 到临时目录
+  Future<String> _saveHtmlFile(String title, String htmlContent) async {
+    final Directory tempDir = await getTemporaryDirectory();
+    final String safeName = title.replaceAll(RegExp(r'[^\w一-鿿\- ]'), '').trim();
+    final String fileName = safeName.isNotEmpty ? '$safeName.html' : 'mathmate_export.html';
+    final File file = File('${tempDir.path}/$fileName');
+    await file.writeAsString(htmlContent);
+    return file.path;
+  }
+
+  /// 通过系统分享对话框分享文件
+  Future<void> _shareFile(String filePath) async {
+    await Share.shareXFiles(
+      <XFile>[XFile(filePath, mimeType: 'text/html')],
+      subject: 'MathMate 数学解答',
+    );
   }
 
   /// 生成 HTML 内容（KaTeX 内嵌，零外部依赖）
@@ -116,12 +133,6 @@ class KatexPdfService {
           el.innerHTML = '<span class="render-error">[公式渲染失败]</span>';
         }
       });
-      // KaTeX 渲染完成后设置就绪标志
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          document.body.setAttribute('data-ready', 'true');
-        });
-      });
     })();
   </script>
 </body>
@@ -162,7 +173,7 @@ class KatexPdfService {
     text = text.replaceAllMapped(RegExp(r'^## (.+)$', multiLine: true), (Match m) => '<h2>${m.group(1)}</h2>');
     text = text.replaceAllMapped(RegExp(r'^# (.+)$', multiLine: true), (Match m) => '<h1>${m.group(1)}</h1>');
 
-    // 结论框：**结论** 或 **关键** 开头的内容
+    // 结论框
     text = text.replaceAllMapped(
       RegExp(r'\*\*(结论|关键|注意|总结|核心|重要)[：:]?\*\*\s*(.+?)(?=\n\n|\n\*\*|$)', multiLine: true),
       (Match m) {
@@ -173,7 +184,7 @@ class KatexPdfService {
       },
     );
 
-    // 分析框：**分析** 或 **思路** 开头的内容
+    // 分析框
     text = text.replaceAllMapped(
       RegExp(r'\*\*(分析|思路|解析)[：:]?\*\*\s*(.+?)(?=\n\n|\n\*\*|$)', multiLine: true),
       (Match m) {
@@ -187,7 +198,7 @@ class KatexPdfService {
     text = text.replaceAllMapped(RegExp(r'\*\*([^*]+)\*\*'), (Match m) => '<strong>${m.group(1)}</strong>');
     text = text.replaceAllMapped(RegExp(r'\*([^*]+)\*'), (Match m) => '<em>${m.group(1)}</em>');
 
-    // 步骤标签（第X步 / Step X / 步骤X）
+    // 步骤标签
     text = text.replaceAllMapped(
       RegExp(r'(第\s*[一二三四五六七八九十百\d]+\s*步|Step\s*\d+|步骤\s*\d+)', multiLine: true),
       (Match m) => '<span class="step-label">${m.group(1)}</span>',
@@ -200,7 +211,7 @@ class KatexPdfService {
     // 引用
     text = text.replaceAllMapped(RegExp(r'^>\s*(.+)$', multiLine: true), (Match m) => '<blockquote>${m.group(1)}</blockquote>');
 
-    // 段落化：未包裹的纯文本
+    // 段落化
     final List<String> lines = text.split('\n');
     final StringBuffer buffer = StringBuffer();
     for (final String line in lines) {
@@ -232,139 +243,17 @@ class KatexPdfService {
         .replaceAll("'", '&#39;');
   }
 
-  /// 打开 WebView 打印对话框
-  Future<void> _openPrintDialog(BuildContext context, String htmlContent) async {
-    if (!context.mounted) return;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext ctx) => _PdfExportDialog(htmlContent: htmlContent),
-    );
-  }
-
-  /// 清理缓存的 KaTeX（可选，释放内存）
+  /// 清理缓存的 KaTeX
   static void clearCache() {
     _cachedJs = null;
     _cachedCss = null;
   }
 }
 
-class _PdfExportDialog extends StatefulWidget {
-  final String htmlContent;
-
-  const _PdfExportDialog({required this.htmlContent});
-
-  @override
-  State<_PdfExportDialog> createState() => _PdfExportDialogState();
-}
-
-class _PdfExportDialogState extends State<_PdfExportDialog> {
-  late final WebViewController _controller;
-  bool _isReady = false;
-  bool _hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFFFFFFFF))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onWebResourceError: (_) {
-            if (mounted) setState(() => _hasError = true);
-          },
-        ),
-      )
-      ..loadHtmlString(widget.htmlContent);
-    _monitorReady();
-  }
-
-  Future<void> _monitorReady() async {
-    for (int i = 0; i < 30; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      if (!mounted) return;
-      try {
-        final String? ready = await _controller.runJavaScriptReturningResult(
-          'document.body.getAttribute("data-ready")',
-        ) as String?;
-        if (ready == 'true') {
-          if (mounted) setState(() => _isReady = true);
-          return;
-        }
-      } catch (_) {}
-    }
-    if (mounted) setState(() => _isReady = true); // 超时后也显示内容
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: AlertDialog(
-        title: Row(
-          children: <Widget>[
-            const Text('导出 PDF'),
-            const Spacer(),
-            if (_hasError)
-              const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
-          ],
-        ),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.95,
-          height: MediaQuery.of(context).size.height * 0.75,
-          child: Stack(
-            children: <Widget>[
-              WebViewWidget(controller: _controller),
-              if (!_isReady)
-                const Center(child: CircularProgressIndicator()),
-              if (_hasError && _isReady)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    color: Colors.orange.shade50,
-                    child: const Row(
-                      children: <Widget>[
-                        Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '部分资源加载失败，但公式仍会尽力渲染。请点击下方打印按钮。',
-                            style: TextStyle(fontSize: 13, color: Colors.orange),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              await _controller.runJavaScript('window.print();');
-            },
-            icon: const Icon(Icons.print),
-            label: const Text('打印/导出 PDF'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class KatexPdfResult {
   final bool success;
   final String? error;
+  final String? filePath;
 
-  KatexPdfResult({required this.success, this.error});
+  KatexPdfResult({required this.success, this.error, this.filePath});
 }

@@ -52,7 +52,9 @@ class DeepSeekService {
         'model': modelId,
         'messages': messages,
       }),
-    );
+    ).timeout(const Duration(seconds: 60), onTimeout: () {
+      throw Exception('DeepSeek API 请求超时（60秒）');
+    });
 
     if (response.statusCode != 200) {
       final String detail = utf8.decode(response.bodyBytes);

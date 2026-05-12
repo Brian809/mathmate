@@ -31,14 +31,18 @@ class _ChatPageState extends State<ChatPage> {
   int? _conversationId;
 
   static const String _systemPrompt =
-      '你是数学解题助手。回答必须使用 Markdown 排版，严格遵守以下规则：\n'
-      '1. 重要的、需要独占一行的公式用 \$\$...\$\$ 包裹（块级公式，会居中显示）。'
-      '只有嵌在正文中的简短公式才用 \$...\$ 包裹。禁止输出未包裹的纯 LaTeX 代码。\n'
-      '2. 每个公式（块级或行内）后面的标点符号要紧跟 \$ 符号，不要换行。错误示例：\$x=1\$\\n。 正确示例：\$x=1\$。\n'
-      '3. 使用 ### 标题组织章节，使用 - 或 1. 创建列表。不要使用 • 符号。标题和列表前后各空一行。\n'
-      '4. 不同逻辑段落之间空一行。\n'
-      '5. 最终答案放在最后。\n'
-      '6. 中文回答，非数学问题引导回数学。';
+      '你是数学解题助手。回答使用Markdown+LaTeX，严格遵守移动端排版规范：\n'
+      '1. 强制块级公式：含 \\frac、\\sqrt、\\sum、复杂上下标的公式严禁用 \$...\$，'
+      '必须用 \$\$...\$\$ 独占一行。简单方程表达式（如椭圆、直线方程）也独立成行用 \$\$...\$\$ 展示。'
+      '对齐公式用 \$\$\\begin{aligned} ... \\end{aligned}\$\$。\n'
+      '2. 公式前后各空一行，增加视觉呼吸感。块级公式与中文段落之间保持间距。\n'
+      '3. 结构化拆解：已知条件用 - 列表逐条列出，公式也放入列表项中。'
+      '已知条件与求解问题之间用 --- 分隔线区分。\n'
+      '4. 每个小问用加粗序号 **(1)**、**(2)**，各自独占一行，不与正文混排。\n'
+      '5. 关键数值加粗：**|AB|=√10**、**e=2√2/3**。\n'
+      '6. 标题只用 ###，禁止使用 #### 或更多 # 号。列表用 -。\n'
+      '7. 最终答案放在末尾，用 ### 标记。\n'
+      '8. 中文回答，非数学问题引导回数学。';
 
   static const List<String> _suggestions = <String>[
     '如何解一元二次方程？',
@@ -177,6 +181,17 @@ class _ChatPageState extends State<ChatPage> {
         modelId: ModelService.instance.currentModelId,
       );
       debugPrint('[ChatPage] 收到响应: ${response.content.length} 字符');
+      // 调试：打印响应中所有 $ 包裹的内容
+      final RegExp dollarPattern = RegExp(r'\$[^\$\n]+\$');
+      final Iterable<Match> matches = dollarPattern.allMatches(response.content);
+      if (matches.isEmpty) {
+        debugPrint('[ChatPage] 响应中无不含换行的行内公式');
+      } else {
+        for (final Match m in matches) {
+          final String f = m.group(0)!;
+          if (f.length < 80) debugPrint('[ChatPage] 行内公式: $f');
+        }
+      }
 
       if (!mounted) return;
 
@@ -315,10 +330,10 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   List<VivoChatMessage> _trimHistory(List<VivoChatMessage> full) {
-    if (full.length <= 13) return full; // system + 6 rounds = 13 max
+    if (full.length <= 21) return full; // system + 10 rounds = 21 max
     return <VivoChatMessage>[
       full.first, // system prompt
-      ...full.sublist(full.length - 12), // last 6 rounds
+      ...full.sublist(full.length - 20), // last 10 rounds
     ];
   }
 
@@ -344,7 +359,6 @@ class _ChatPageState extends State<ChatPage> {
     final KatexPdfResult result = await pdfService.exportToPdf(
       title: '蓝心数学助手 — 解答',
       content: content,
-      context: context,
     );
 
     if (!mounted) return;
@@ -353,7 +367,7 @@ class _ChatPageState extends State<ChatPage> {
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('PDF 生成完成，请在打印对话框中选择"另存为 PDF"'),
+          content: Text('HTML 文件已生成，请选择保存位置或浏览器打开'),
           duration: Duration(seconds: 3),
         ),
       );
@@ -643,9 +657,15 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildMarkdownContent(String text) {
+    // 规范化标题层级：#### → ###，防止 h4+ 不被渲染
+    String normalized = text.replaceAllMapped(
+      RegExp(r'^#{4,6}\s+(.+)$', multiLine: true),
+      (Match m) => '### ${m.group(1)}',
+    );
+
     // 保护代码块，避免 $ 被误识别为数学公式
     final List<String> codeBlocks = <String>[];
-    String processed = text.replaceAllMapped(
+    String processed = normalized.replaceAllMapped(
       RegExp(r'```[\s\S]*?```'),
       (Match m) {
         codeBlocks.add(m.group(0)!);
@@ -746,6 +766,14 @@ class _ChatPageState extends State<ChatPage> {
       return <Widget>[_mdWidget(restored)];
     }
 
+    // 调试：打印所有匹配到的内联公式
+    for (final Match m in inlineMathRegex.allMatches(restored)) {
+      final String latex = (m.group(1) ?? '').trim();
+      if (latex.isNotEmpty && latex.length < 60) {
+        debugPrint('[InlineMath] found: \$$latex\$');
+      }
+    }
+
     // 有内联公式 → 按段落拆分，每段独立渲染
     final List<String> paragraphs = restored.split(RegExp(r'\n\n+'));
     final List<Widget> result = <Widget>[];
@@ -760,7 +788,7 @@ class _ChatPageState extends State<ChatPage> {
       }
 
       if (i < paragraphs.length - 1) {
-        result.add(const SizedBox(height: 10));
+        result.add(const SizedBox(height: 6));
       }
     }
 
@@ -783,18 +811,32 @@ class _ChatPageState extends State<ChatPage> {
 
       final String latex = (match.group(1) ?? '').trim();
       if (latex.isNotEmpty) {
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: Math.tex(
-            latex,
-            mathStyle: MathStyle.text,
-            textStyle: const TextStyle(fontSize: 15),
-            onErrorFallback: (_) => Text(
+        try {
+          spans.add(WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Math.tex(
+              latex,
+              mathStyle: MathStyle.text,
+              textStyle: const TextStyle(fontSize: 15),
+              onErrorFallback: (_) {
+                debugPrint('[InlineMath] error: $latex');
+                return Text(
+                  latex,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+                );
+              },
+            ),
+          ));
+        } catch (e) {
+          debugPrint('[InlineMath] exception: $e for: $latex');
+          spans.add(WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Text(
               latex,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
             ),
-          ),
-        ));
+          ));
+        }
       }
       lastEnd = match.end;
     }

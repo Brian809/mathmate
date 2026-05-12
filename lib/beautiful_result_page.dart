@@ -108,6 +108,13 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
           result.recognize?.questionMarkdown.trim() ?? '';
       final String solutionMarkdown =
           result.solve?.solutionMarkdown.trim() ?? '';
+      // 调试：打印求解结果中的行内公式
+      debugPrint('[SolveResult] solutionMarkdown: ${solutionMarkdown.length} 字符');
+      final RegExp dollarPattern = RegExp(r'\$[^\$\n]+\$');
+      for (final Match m in dollarPattern.allMatches(solutionMarkdown)) {
+        final String f = m.group(0)!;
+        if (f.length < 80) debugPrint('[SolveResult] 行内公式: $f');
+      }
       final String formulaPreview = _extractFormulaPreview(
         '$questionMarkdown\n$solutionMarkdown',
       );
@@ -346,14 +353,13 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
     final KatexPdfResult result = await pdfService.exportToPdf(
       title: 'MathMate 识别结果',
       content: content.toString(),
-      context: context,
     );
 
     if (!mounted) return;
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('PDF 生成完成，请在打印对话框中选择"另存为 PDF"'),
+          content: Text('HTML 文件已生成，请选择保存位置或浏览器打开'),
           duration: Duration(seconds: 3),
         ),
       );
@@ -550,13 +556,18 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
   }
 
   List<Widget> _buildContentBlocks(String content) {
+    // 规范化标题层级：#### → ###
+    final String normalized = content.replaceAllMapped(
+      RegExp(r'^#{4,6}\s+(.+)$', multiLine: true),
+      (Match m) => '### ${m.group(1)}',
+    );
     final List<Widget> widgets = <Widget>[];
     final RegExp displayMathRegex = RegExp(r'\$\$([\s\S]*?)\$\$');
 
     int lastEnd = 0;
-    for (final RegExpMatch match in displayMathRegex.allMatches(content)) {
+    for (final RegExpMatch match in displayMathRegex.allMatches(normalized)) {
       if (match.start > lastEnd) {
-        final String textBefore = content
+        final String textBefore = normalized
             .substring(lastEnd, match.start)
             .trim();
         if (textBefore.isNotEmpty) {
@@ -572,15 +583,15 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
       lastEnd = match.end;
     }
 
-    if (lastEnd < content.length) {
-      final String textAfter = content.substring(lastEnd).trim();
+    if (lastEnd < normalized.length) {
+      final String textAfter = normalized.substring(lastEnd).trim();
       if (textAfter.isNotEmpty) {
         widgets.addAll(_buildInlineMathText(textAfter));
       }
     }
 
     if (widgets.isEmpty) {
-      widgets.addAll(_buildInlineMathText(content));
+      widgets.addAll(_buildInlineMathText(normalized));
     }
 
     return widgets;
@@ -664,38 +675,76 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
   }
 
   List<Widget> _buildInlineMathText(String text) {
-    final List<Widget> widgets = <Widget>[];
     final RegExp inlineMathRegex = RegExp(r'\$([^\$\n]+)\$');
 
+    // 无不含换行的内联公式 → 单次 MarkdownBody（保留完整 Markdown 格式）
+    if (!inlineMathRegex.hasMatch(text)) {
+      return <Widget>[_buildMarkdownText(text)];
+    }
+
+    // 有内联公式 → 按段落拆分，段落级渲染（保护列表、标题等 Markdown 结构）
+    final List<String> paragraphs = text.split(RegExp(r'\n\n+'));
+    final List<Widget> result = <Widget>[];
+    for (int i = 0; i < paragraphs.length; i++) {
+      final String para = paragraphs[i].trim();
+      if (para.isEmpty) continue;
+
+      if (inlineMathRegex.hasMatch(para)) {
+        result.add(_buildRichTextParagraph(para));
+      } else {
+        result.add(_buildMarkdownText(para));
+      }
+
+      if (i < paragraphs.length - 1) {
+        result.add(const SizedBox(height: 6));
+      }
+    }
+
+    if (result.isEmpty && text.isNotEmpty) {
+      result.add(_buildMarkdownText(text));
+    }
+    return result;
+  }
+
+  /// 将含内联公式的段落渲染为 Text.rich + WidgetSpan，保证公式与文字正确混排而不破坏段落结构
+  Widget _buildRichTextParagraph(String text) {
+    final RegExp inlineMathRegex = RegExp(r'\$([^\$\n]+)\$');
+    final List<InlineSpan> spans = <InlineSpan>[];
     int lastEnd = 0;
+
     for (final RegExpMatch match in inlineMathRegex.allMatches(text)) {
       if (match.start > lastEnd) {
-        final String textBefore = text.substring(lastEnd, match.start).trim();
-        if (textBefore.isNotEmpty) {
-          widgets.add(_buildMarkdownText(textBefore));
-        }
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF333333)),
+        ));
       }
 
-      final String latex = match.group(1)?.trim() ?? '';
+      final String latex = (match.group(1) ?? '').trim();
       if (latex.isNotEmpty) {
-        widgets.add(_buildMathWidget(latex, fontSize: 15));
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: _buildMathWidget(latex, fontSize: 15),
+        ));
       }
-
       lastEnd = match.end;
     }
 
     if (lastEnd < text.length) {
-      final String textAfter = text.substring(lastEnd).trim();
-      if (textAfter.isNotEmpty) {
-        widgets.add(_buildMarkdownText(textAfter));
-      }
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF333333)),
+      ));
     }
 
-    if (widgets.isEmpty && text.isNotEmpty) {
-      widgets.add(_buildMarkdownText(text));
-    }
-
-    return widgets;
+    return SelectionArea(
+      child: Text.rich(
+        TextSpan(
+          style: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF333333)),
+          children: spans,
+        ),
+      ),
+    );
   }
 
   Widget _buildMarkdownText(String text) {

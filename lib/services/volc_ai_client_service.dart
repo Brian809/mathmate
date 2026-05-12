@@ -134,7 +134,9 @@ class VolcAiClientService {
         'model': modelId,
         'messages': messages,
       }),
-    );
+    ).timeout(const Duration(seconds: 60), onTimeout: () {
+      throw Exception('Volc API 请求超时（60秒）');
+    });
   }
 
   Future<http.Response> _postInput(
@@ -150,7 +152,9 @@ class VolcAiClientService {
         'model': modelId,
         'input': _toInputFormat(messages),
       }),
-    );
+    ).timeout(const Duration(seconds: 60), onTimeout: () {
+      throw Exception('Volc API 请求超时（60秒）');
+    });
   }
 
   List<Map<String, dynamic>> _toInputFormat(List<Map<String, dynamic>> messages) {

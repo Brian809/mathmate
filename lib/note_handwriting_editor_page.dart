@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'note_model.dart';
 import 'services/formula_analysis_service.dart';
@@ -403,13 +404,6 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
     }
   }
 
-  String _getAllRecognizedText() {
-    return _pages
-        .where((p) => p.recognizedText.isNotEmpty)
-        .map((p) => p.recognizedText)
-        .join('\n\n');
-  }
-
   Future<void> _analyzeFormula(String formula) async {
     setState(() => _analyzingFormula = formula);
     try {
@@ -546,19 +540,30 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
   }
 
   Future<void> _exportText() async {
-    final allText = _getAllRecognizedText();
-    if (allText.isEmpty) {
+    if (_currentPage.strokes.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('没有识别内容可导出')));
+          .showSnackBar(const SnackBar(content: Text('当前页没有笔迹可导出')));
       return;
     }
     try {
-      final directory = await getTemporaryDirectory();
-      final file = await File('${directory.path}/handwriting_note.txt').create();
-      await file.writeAsString(allText);
+      // 捕获画布为 PNG
+      final RenderRepaintBoundary boundary =
+          _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('图片转换失败');
+
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      final Directory tempDir = await getTemporaryDirectory();
+      final String fileName = 'handwriting_${DateTime.now().millisecondsSinceEpoch}.png';
+      final File file = File('${tempDir.path}/$fileName');
+      await file.writeAsBytes(pngBytes);
+
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('已导出到: ${file.path}')));
+        await Share.shareXFiles(
+          <XFile>[XFile(file.path, mimeType: 'image/png')],
+          subject: '手写笔记',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -600,7 +605,7 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
           ),
           IconButton(
             icon: const Icon(Icons.save_alt),
-            tooltip: "导出文本",
+            tooltip: "导出图片",
             onPressed: _exportText,
           ),
           IconButton(

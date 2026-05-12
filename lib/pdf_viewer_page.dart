@@ -275,7 +275,14 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
               Expanded(
                 child: Stack(
                   children: [
-                    WebViewWidget(controller: _controller),
+                    if (_mode == _PdfMode.view)
+                      InteractiveViewer(
+                        minScale: 0.5,
+                        maxScale: 5.0,
+                        child: WebViewWidget(controller: _controller),
+                      )
+                    else
+                      WebViewWidget(controller: _controller),
                     IgnorePointer(
                       child: CustomPaint(
                         painter: _PdfStrokePainter(
