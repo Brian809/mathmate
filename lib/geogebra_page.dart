@@ -105,7 +105,14 @@ class _GeogebraPageState extends State<GeogebraPage> {
   Future<String> _ensureLocalFiles() async {
     final Directory dir =
         Directory('${(await getApplicationDocumentsDirectory()).path}/geogebra');
-    if (await dir.exists()) return dir.path;
+    if (await dir.exists()) {
+      // 验证关键文件是否存在，缺失则重新完整提取
+      final File testHtml = File('${dir.path}/$_htmlFile');
+      final File testWeb3d = File('${dir.path}/web3d/web3d.nocache.js');
+      if (await testHtml.exists() && await testWeb3d.exists()) return dir.path;
+      // 目录存在但文件不完整，删除后重新提取
+      await dir.delete(recursive: true);
+    }
 
     await dir.create(recursive: true);
 
@@ -131,7 +138,7 @@ class _GeogebraPageState extends State<GeogebraPage> {
       _loading = true;
       _hasError = false;
     });
-    _controller.loadFile('$_localBasePath/$_htmlFile');
+    _initAsync(); // 重新执行完整初始化流程，修复文件缺失问题
   }
 
   @override

@@ -92,8 +92,13 @@ class FormulaAnalysisService {
 
   String _extractJson(String text) {
     final start = text.indexOf('{');
-    final end = text.lastIndexOf('}');
-    if (start >= 0 && end > start) return text.substring(start, end + 1);
+    if (start < 0) return text;
+    int depth = 0;
+    for (int i = start; i < text.length; i++) {
+      if (text[i] == '{') depth++;
+      if (text[i] == '}') depth--;
+      if (depth == 0) return text.substring(start, i + 1);
+    }
     return text;
   }
 }

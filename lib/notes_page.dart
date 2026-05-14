@@ -41,10 +41,16 @@ class _NotesPageState extends State<NotesPage> {
     final prefs = await SharedPreferences.getInstance();
     final notesJson = prefs.getStringList('notes') ?? [];
     if (!mounted) return;
+    final List<Note> parsed = <Note>[];
+    for (final String jsonStr in notesJson) {
+      try {
+        parsed.add(Note.fromJson(json.decode(jsonStr)));
+      } catch (e) {
+        debugPrint('跳过损坏的笔记: $e');
+      }
+    }
     setState(() {
-      allNotes = notesJson
-          .map((jsonStr) => Note.fromJson(json.decode(jsonStr)))
-          .toList();
+      allNotes = parsed;
       _filterNotes();
     });
   }

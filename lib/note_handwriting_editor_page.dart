@@ -374,17 +374,37 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
         Uint8List pngBytes = byteData.buffer.asUint8List();
         final result = await _ocrService.recognize(pngBytes);
         if (mounted) {
-          // 将识别结果解析为 RecognizedBlock 列表
+          // 解析识别结果：保持多行 LaTeX 块完整性
           final blocks = <RecognizedBlock>[];
           double yOffset = 0;
-          for (final line in result.split('\n')) {
-            final trimmed = line.trim();
+          final List<String> lines = result.split('\n');
+          for (int i = 0; i < lines.length; i++) {
+            final String trimmed = lines[i].trim();
             if (trimmed.isEmpty) continue;
-            blocks.add(RecognizedBlock(
-              text: trimmed,
-              position: Offset(20, yOffset),
-              scale: 1.0,
-            ));
+            // 检测 \begin{...} 开头但未闭合的块，向下收集直到匹配的 \end{...}
+            final beginMatch = RegExp(r'\\begin\{(\w+)\}').firstMatch(trimmed);
+            final endMatch = RegExp(r'\\end\{(\w+)\}').firstMatch(trimmed);
+            if (beginMatch != null &&
+                (endMatch == null || endMatch.group(1) != beginMatch.group(1))) {
+              final StringBuffer buf = StringBuffer(trimmed);
+              final String envName = beginMatch.group(1)!;
+              while (i + 1 < lines.length) {
+                i++;
+                buf.write('\n${lines[i].trim()}');
+                if (RegExp('\\\\end\\{$envName\\}').hasMatch(lines[i])) break;
+              }
+              blocks.add(RecognizedBlock(
+                text: buf.toString(),
+                position: Offset(20, yOffset),
+                scale: 1.0,
+              ));
+            } else {
+              blocks.add(RecognizedBlock(
+                text: trimmed,
+                position: Offset(20, yOffset),
+                scale: 1.0,
+              ));
+            }
             yOffset += 48;
           }
           setState(() {
@@ -1666,10 +1686,10 @@ ${widget.visualization}
     final List<InlineSpan> spans = [];
     int i = 0;
     while (i < line.length) {
-      // 匹配 $...$ 内联公式
-      if (line[i] == r'$') {
+      // 匹配 $...$ 内联公式（跳过 \$ 转义符）
+      if (line[i] == r'$' && (i == 0 || line[i - 1] != r'\')) {
         final end = line.indexOf(r'$', i + 1);
-        if (end != -1) {
+        if (end != -1 && (end == 0 || line[end - 1] != r'\')) {
           final formula = line.substring(i + 1, end);
           spans.add(WidgetSpan(
             alignment: PlaceholderAlignment.middle,

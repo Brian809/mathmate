@@ -49,6 +49,15 @@ class Note {
     };
   }
 
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is String && value.isNotEmpty) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {}
+    }
+    return DateTime.now();
+  }
+
   static Note fromJson(Map<String, dynamic> json) {
     String parsedCategory = '其他';
     if (json['category'] != null) {
@@ -68,8 +77,8 @@ class Note {
     return Note(
       title: json['title'] ?? '',
       content: json['content'] ?? '',
-      createTime: DateTime.parse(json['createTime'] ?? DateTime.now().toIso8601String()),
-      updateTime: DateTime.parse(json['updateTime'] ?? json['createTime']),
+      createTime: _parseDateTime(json['createTime']),
+      updateTime: _parseDateTime(json['updateTime'] ?? json['createTime']),
       textColor: Color(
         int.parse(json['textColor'] ?? Colors.black.value.toString()),
       ),

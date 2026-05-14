@@ -1,16 +1,17 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// KaTeX HTML 导出服务
-/// 使用内嵌 KaTeX 渲染公式（无需网络），生成自包含 HTML 文件并分享到本地
+/// 使用内嵌 KaTeX 渲染公式（无需网络），生成自包含 HTML 文件保存到文档目录
 class KatexPdfService {
   static String? _cachedJs;
   static String? _cachedCss;
 
-  /// 导出 HTML 文件 - 保存到临时目录并通过系统分享对话框分享
+  /// 导出 HTML 文件 - 保存到文档目录并通过分享/打开
   Future<KatexPdfResult> exportToPdf({
     required String title,
     required String content,
@@ -21,7 +22,7 @@ class KatexPdfService {
 
       final String htmlContent = _generateHtml(title, subtitle, content);
       final String filePath = await _saveHtmlFile(title, htmlContent);
-      await _shareFile(filePath);
+      await _openAndShareFile(filePath);
 
       return KatexPdfResult(success: true, filePath: filePath);
     } catch (e) {
@@ -38,18 +39,19 @@ class KatexPdfService {
     _cachedCss = rawCss.replaceAll(RegExp(r'@font-face\{[^}]*\}'), '');
   }
 
-  /// 保存 HTML 到临时目录
+  /// 保存 HTML 到文档目录（持久化存储，不会被系统清理）
   Future<String> _saveHtmlFile(String title, String htmlContent) async {
-    final Directory tempDir = await getTemporaryDirectory();
+    final Directory docDir = await getApplicationDocumentsDirectory();
     final String safeName = title.replaceAll(RegExp(r'[^\w一-鿿\- ]'), '').trim();
     final String fileName = safeName.isNotEmpty ? '$safeName.html' : 'mathmate_export.html';
-    final File file = File('${tempDir.path}/$fileName');
+    final File file = File('${docDir.path}/$fileName');
     await file.writeAsString(htmlContent);
     return file.path;
   }
 
-  /// 通过系统分享对话框分享文件
-  Future<void> _shareFile(String filePath) async {
+  /// 打开 HTML 文件并通过分享对话框分享
+  Future<void> _openAndShareFile(String filePath) async {
+    await OpenFile.open(filePath, type: 'text/html');
     await Share.shareXFiles(
       <XFile>[XFile(filePath, mimeType: 'text/html')],
       subject: 'MathMate 数学解答',

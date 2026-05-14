@@ -62,5 +62,15 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- B站 app scheme -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="bilibili"/>
+        </intent>
+        <!-- 浏览器打开 B站 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https" android:host="www.bilibili.com"/>
+        </intent>
     </queries>
 </manifest>

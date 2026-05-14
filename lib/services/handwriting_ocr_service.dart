@@ -55,7 +55,9 @@ class HandwritingOcrService {
           },
         ],
       }),
-    );
+    ).timeout(const Duration(seconds: 60), onTimeout: () {
+      throw Exception('手写识别请求超时（60秒）');
+    });
 
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));

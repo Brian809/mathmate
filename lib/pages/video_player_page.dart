@@ -64,14 +64,28 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   Uri get _bilibiliAppUri => Uri.parse('bilibili://video/${widget.bvId}');
 
   Future<void> _openInExternalBrowser() async {
-    final Uri appUri = _bilibiliAppUri;
-    if (await canLaunchUrl(appUri)) {
-      await launchUrl(appUri, mode: LaunchMode.externalApplication);
-      return;
-    }
-    final Uri webUri = _bilibiliPageUri;
-    if (await canLaunchUrl(webUri)) {
-      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    try {
+      final Uri appUri = _bilibiliAppUri;
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+      final Uri webUri = _bilibiliPageUri;
+      if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无法打开浏览器，请确认已安装浏览器')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('打开失败: $e')),
+        );
+      }
     }
   }
 
