@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'note_editor_page.dart';
 import 'note_handwriting_editor_page.dart';
 import 'note_model.dart';
@@ -106,7 +107,8 @@ class _NotesPageState extends State<NotesPage> {
     final srcPath = pickedFile.path!;
     final fileName = pickedFile.name;
 
-    final appDir = Directory('${Directory.systemTemp.path}/mathmate_pdfs');
+    final docDir = await getApplicationDocumentsDirectory();
+    final appDir = Directory('${docDir.path}/mathmate_pdfs');
     if (!await appDir.exists()) await appDir.create(recursive: true);
     final destPath = '${appDir.path}/$fileName';
     await File(srcPath).copy(destPath);
@@ -128,12 +130,20 @@ class _NotesPageState extends State<NotesPage> {
 
     // 导入后直接进入编辑界面
     if (!mounted) return;
-    await Navigator.push(
+    final updatedNote = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PdfViewerPage(pdfPath: destPath, title: note.title),
+        builder: (_) => PdfViewerPage(note: note),
       ),
     );
+    if (updatedNote != null && updatedNote is Note && mounted) {
+      setState(() {
+        final idx = allNotes.indexOf(note);
+        if (idx != -1) allNotes[idx] = updatedNote;
+      });
+      await _saveNotesToLocal();
+      _filterNotes();
+    }
   }
 
   Future<void> _createNewNote({bool handwriting = false}) async {
@@ -160,17 +170,25 @@ class _NotesPageState extends State<NotesPage> {
     final note = filteredNotes[index];
     if (note.noteType == 'pdf') {
       if (note.pdfPath.isNotEmpty && File(note.pdfPath).existsSync()) {
-        await Navigator.push(
+        final updatedNote = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PdfViewerPage(pdfPath: note.pdfPath, title: note.title),
+            builder: (_) => PdfViewerPage(note: note),
           ),
         );
+        if (updatedNote != null && updatedNote is Note && mounted) {
+          setState(() {
+            final idx = allNotes.indexOf(note);
+            if (idx != -1) allNotes[idx] = updatedNote;
+          });
+          await _saveNotesToLocal();
+          _filterNotes();
+        }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('PDF文件不存在')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('PDF文件不存在')));
         }
       }
       return;
@@ -275,7 +293,9 @@ class _NotesPageState extends State<NotesPage> {
             return ListTile(
               title: Text(category),
               leading: Icon(
-                selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                selected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
                 color: selected ? Theme.of(context).primaryColor : Colors.grey,
               ),
               onTap: () {
@@ -292,7 +312,9 @@ class _NotesPageState extends State<NotesPage> {
               style: TextStyle(color: Colors.blue),
             ),
             leading: Icon(
-              _selectedCategory == null ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              _selectedCategory == null
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
               color: _selectedCategory == null ? Colors.blue : Colors.grey,
             ),
             onTap: () {
@@ -364,7 +386,13 @@ class _NotesPageState extends State<NotesPage> {
                 children: [
                   const Padding(
                     padding: EdgeInsets.all(16),
-                    child: Text("新建笔记", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      "新建笔记",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   ListTile(
                     leading: const Icon(Icons.keyboard, color: Colors.blue),
@@ -385,7 +413,10 @@ class _NotesPageState extends State<NotesPage> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                    leading: const Icon(
+                      Icons.picture_as_pdf,
+                      color: Colors.red,
+                    ),
                     title: const Text("导入PDF"),
                     subtitle: const Text("从手机导入PDF文件"),
                     onTap: () {
@@ -416,30 +447,51 @@ class _NotesPageState extends State<NotesPage> {
                   leading: isHandwriting
                       ? const Icon(Icons.draw, color: Colors.orange, size: 28)
                       : isPdf
-                          ? const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28)
-                          : null,
+                      ? const Icon(
+                          Icons.picture_as_pdf,
+                          color: Colors.red,
+                          size: 28,
+                        )
+                      : const Icon(Icons.keyboard, color: Colors.blue, size: 28),
                   title: Row(
                     children: [
-                      Expanded(child: Text(note.title.isEmpty ? "无标题" : note.title)),
+                      Expanded(
+                        child: Text(note.title.isEmpty ? "无标题" : note.title),
+                      ),
                       if (isHandwriting)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange.shade50,
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(color: Colors.orange.shade200),
                           ),
-                          child: const Text("手写", style: TextStyle(fontSize: 10, color: Colors.orange)),
+                          child: const Text(
+                            "手写",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange,
+                            ),
+                          ),
                         ),
                       if (isPdf)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red.shade50,
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(color: Colors.red.shade200),
                           ),
-                          child: const Text("PDF", style: TextStyle(fontSize: 10, color: Colors.red)),
+                          child: const Text(
+                            "PDF",
+                            style: TextStyle(fontSize: 10, color: Colors.red),
+                          ),
                         ),
                     ],
                   ),
@@ -475,7 +527,7 @@ class _NotesPageState extends State<NotesPage> {
                           fontSize: 10,
                           color: Colors.grey,
                         ),
-),
+                      ),
                     ],
                   ),
                   trailing: Row(

@@ -358,6 +358,115 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
     return (p - proj).distance;
   }
 
+  Rect _calculateStrokeBounds() {
+    double minX = double.infinity, minY = double.infinity;
+    double maxX = double.negativeInfinity, maxY = double.negativeInfinity;
+    double maxStrokeWidth = 0;
+
+    for (final stroke in _currentPage.strokes) {
+      if (stroke.width > maxStrokeWidth) maxStrokeWidth = stroke.width;
+      for (final point in stroke.points) {
+        if (point.dx < minX) minX = point.dx;
+        if (point.dy < minY) minY = point.dy;
+        if (point.dx > maxX) maxX = point.dx;
+        if (point.dy > maxY) maxY = point.dy;
+      }
+    }
+    for (final point in _currentPage.currentPoints) {
+      if (point.dx < minX) minX = point.dx;
+      if (point.dy < minY) minY = point.dy;
+      if (point.dx > maxX) maxX = point.dx;
+      if (point.dy > maxY) maxY = point.dy;
+    }
+
+    const padding = 32.0;
+    final halfWidth = maxStrokeWidth / 2;
+    final totalPadding = padding + halfWidth;
+    return Rect.fromLTRB(
+      (minX - totalPadding).clamp(0, _paperSize.width),
+      (minY - totalPadding).clamp(0, _paperSize.height),
+      (maxX + totalPadding).clamp(0, _paperSize.width),
+      (maxY + totalPadding).clamp(0, _paperSize.height),
+    );
+  }
+
+  List<Offset> _catmullRomSmoothPoints(List<Offset> points) {
+    final result = <Offset>[points.first];
+    final pts = [points.first, ...points, points.last];
+    for (int i = 0; i < pts.length - 3; i++) {
+      final p0 = pts[i];
+      final p1 = pts[i + 1];
+      final p2 = pts[i + 2];
+      final p3 = pts[i + 3];
+      for (int j = 1; j <= 8; j++) {
+        final t = j / 8.0;
+        final t2 = t * t;
+        final t3 = t2 * t;
+        result.add(Offset(
+          0.5 * (2 * p1.dx + (-p0.dx + p2.dx) * t +
+              (2 * p0.dx - 5 * p1.dx + 4 * p2.dx - p3.dx) * t2 +
+              (-p0.dx + 3 * p1.dx - 3 * p2.dx + p3.dx) * t3),
+          0.5 * (2 * p1.dy + (-p0.dy + p2.dy) * t +
+              (2 * p0.dy - 5 * p1.dy + 4 * p2.dy - p3.dy) * t2 +
+              (-p0.dy + 3 * p1.dy - 3 * p2.dy + p3.dy) * t3),
+        ));
+      }
+    }
+    result.add(points.last);
+    return result;
+  }
+
+  void _drawSmoothPath(Canvas canvas, List<Offset> points, Paint paint) {
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      canvas.drawPoints(ui.PointMode.points, points, paint);
+      return;
+    }
+    if (points.length == 2) {
+      canvas.drawLine(points[0], points[1], paint);
+      return;
+    }
+    final smoothed = _catmullRomSmoothPoints(points);
+    final path = Path();
+    path.moveTo(smoothed.first.dx, smoothed.first.dy);
+    for (int i = 1; i < smoothed.length; i++) {
+      path.lineTo(smoothed[i].dx, smoothed[i].dy);
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  Future<ui.Image> _renderStrokesBlack(Rect bounds) async {
+    const pixelRatio = 3.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.translate(-bounds.left, -bounds.top);
+
+    // 白色背景
+    canvas.drawRect(bounds, Paint()..color = Colors.white);
+
+    // 所有笔迹以黑色绘制，忽略用户选择的颜色
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    for (final stroke in _currentPage.strokes) {
+      paint.strokeWidth = stroke.width;
+      _drawSmoothPath(canvas, stroke.points, paint);
+    }
+    if (_currentPage.currentPoints.isNotEmpty) {
+      paint.strokeWidth = _activeWidth;
+      _drawSmoothPath(canvas, _currentPage.currentPoints, paint);
+    }
+
+    final picture = recorder.endRecording();
+    return picture.toImage(
+      (bounds.width * pixelRatio).ceil(),
+      (bounds.height * pixelRatio).ceil(),
+    );
+  }
+
   Future<void> _recognizeHandwriting() async {
     if (_currentPage.strokes.isEmpty) {
       ScaffoldMessenger.of(context)
@@ -366,9 +475,11 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
     }
     setState(() => _isRecognizing = true);
     try {
-      RenderRepaintBoundary boundary =
-          _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final strokeBounds = _calculateStrokeBounds();
+
+      // 生成黑白识别用图：无论用户选什么颜色，笔迹统一黑色，白色背景
+      final image = await _renderStrokesBlack(strokeBounds);
+
       ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData != null && mounted) {
         Uint8List pngBytes = byteData.buffer.asUint8List();
@@ -377,6 +488,8 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
           // 解析识别结果：保持多行 LaTeX 块完整性
           final blocks = <RecognizedBlock>[];
           double yOffset = 0;
+          final startX = strokeBounds.left + 20;
+          final startY = strokeBounds.top;
           final List<String> lines = result.split('\n');
           for (int i = 0; i < lines.length; i++) {
             final String trimmed = lines[i].trim();
@@ -395,13 +508,13 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
               }
               blocks.add(RecognizedBlock(
                 text: buf.toString(),
-                position: Offset(20, yOffset),
+                position: Offset(startX, startY + yOffset),
                 scale: 1.0,
               ));
             } else {
               blocks.add(RecognizedBlock(
                 text: trimmed,
-                position: Offset(20, yOffset),
+                position: Offset(startX, startY + yOffset),
                 scale: 1.0,
               ));
             }
@@ -1681,7 +1794,7 @@ ${widget.visualization}
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 
-  // 解析单行中的内联 $...$ 和 **粗体**
+  // 解析单行中的内联 $...$ 和 **粗体**（跳过 \$ 转义符）
   Widget _buildInlineMixed(String line, ColorScheme cs) {
     final List<InlineSpan> spans = [];
     int i = 0;
