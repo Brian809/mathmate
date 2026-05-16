@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mathmate/beautiful_result_page.dart';
 import 'package:mathmate/pages/chat_home_page.dart';
 import 'package:mathmate/notes_page.dart';
@@ -28,6 +30,20 @@ import 'package:mathmate/tutorial_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化设备ID
+  final prefs = await SharedPreferences.getInstance();
+  if (!prefs.containsKey('device_id')) {
+    final deviceInfo = await DeviceInfoPlugin().deviceInfo;
+    String deviceId = '';
+    if (deviceInfo is AndroidDeviceInfo) {
+      deviceId = deviceInfo.id;
+    } else if (deviceInfo is IosDeviceInfo) {
+      deviceId = deviceInfo.identifierForVendor ?? '';
+    }
+    await prefs.setString('device_id', deviceId);
+  }
+
   await HistoryRepository.instance.init();
   await ConversationRepository.instance.init();
   await ThemeService.instance.init();
