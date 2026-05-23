@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mathmate/chat_page.dart';
-import 'package:mathmate/data/conversation_models.dart';
+import 'package:mathmate/data/hive_conversation_models.dart';
 import 'package:mathmate/data/conversation_repository.dart';
 import 'package:mathmate/services/model_service.dart';
 

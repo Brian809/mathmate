@@ -3,38 +3,47 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:isar/isar.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mathmate/data/history_models.dart';
-import 'package:mathmate/visualization/safe_json_parser.dart';
+import 'package:mathmate/data/hive_models.dart';
 
 const String _kIsFirstLaunch = 'is_first_launch';
 const String _kGradeLevel = 'grade_level';
 const String _kTutorialCompleted = 'tutorial_completed';
+const String _kHistoryBoxName = 'math_history';
 
 class HistoryRepository {
   HistoryRepository._();
 
   static final HistoryRepository instance = HistoryRepository._();
 
-  Isar? _isar;
+  Box<MathHistory>? _box;
 
-  bool get isReady => _isar != null;
+  bool get isReady => _box != null && _box!.isOpen;
 
   Future<void> init() async {
-    if (_isar != null) {
+    if (_box != null && _box!.isOpen) {
       return;
     }
 
-    final Directory dir = await getApplicationDocumentsDirectory();
-    _isar = await Isar.open(
-      <CollectionSchema>[MathHistorySchema],
-      directory: dir.path,
-      name: 'mathmate_history',
-    );
+    await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(MathHistoryAdapter());
+    }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(GeometrySceneEmbeddedAdapter());
+    }
+    if (!Hive.isAdapterRegistered(2)) {
+      Hive.registerAdapter(ViewportEmbeddedAdapter());
+    }
+    if (!Hive.isAdapterRegistered(3)) {
+      Hive.registerAdapter(GeometryElementEmbeddedAdapter());
+    }
+
+    _box = await Hive.openBox<MathHistory>(_kHistoryBoxName);
   }
 
   Future<void> saveHistory({
@@ -45,63 +54,54 @@ class HistoryRepository {
     Map<String, dynamic>? sceneMap,
   }) async {
     await init();
-    final Isar isar = _isar!;
 
-    final File persistedImage = await _persistImage(sourceImage);
-    final SafeJsonParser parser = const SafeJsonParser();
-
-    // AI generated title
+    final String imagePath = await _persistImage(sourceImage);
     final String title = await _generateTitle(ocrContent);
 
-    final MathHistory entity = MathHistory()
-      ..timestamp = DateTime.now()
-      ..originalImagePath = persistedImage.path
-      ..ocrContent = ocrContent
-      ..solutionMarkdown = solutionMarkdown
-      ..latexResult = latexResult
-      ..title = title;
+    final MathHistory entity = MathHistory.create(
+      timestamp: DateTime.now(),
+      originalImagePath: imagePath,
+      ocrContent: ocrContent,
+      solutionMarkdown: solutionMarkdown,
+      latexResult: latexResult,
+      title: title,
+    );
 
     if (sceneMap != null) {
-      entity.geometryScene = GeometrySceneEmbedded.fromMap(sceneMap, parser);
+      entity.geometryScene = GeometrySceneEmbedded.fromMap(sceneMap, null);
     }
 
-    await isar.writeTxn(() async {
-      await isar.mathHistorys.put(entity);
-    });
+    entity.id = DateTime.now().millisecondsSinceEpoch;
+    await _box!.put(entity.id, entity);
   }
 
   Stream<List<MathHistory>> watchHistories() async* {
     await init();
-    final Isar isar = _isar!;
+    yield _box!.values.toList()
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    yield* isar.mathHistorys
-        .where()
-        .sortByTimestampDesc()
-        .watch(fireImmediately: true);
-  }
-
-  Future<void> deleteHistory(Id id) async {
-    await init();
-    final Isar isar = _isar!;
-
-    final MathHistory? history = await isar.mathHistorys.get(id);
-    if (history != null) {
-      final File image = File(history.originalImagePath);
-      if (await image.exists()) {
-        try {
-          await image.delete();
-        } catch (e) {
-          debugPrint('delete image failed: $e');
-        }
-      }
+    await for (final _ in _box!.watch()) {
+      yield _box!.values.toList()
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     }
-
-    await isar.writeTxn(() async {
-      await isar.mathHistorys.delete(id);
-    });
   }
 
-  /// Use AI to generate a short title for the history entry
+  Future<void> deleteHistory(int id) async {
+    await init();
+    final MathHistory? history = _box!.get(id);
+    if (history != null) {
+      try {
+        final File image = File(history.originalImagePath);
+        if (await image.exists()) {
+          await image.delete();
+        }
+      } catch (e) {
+        debugPrint('delete image failed: $e');
+      }
+      await _box!.delete(id);
+    }
+  }
+
   Future<String> _generateTitle(String ocrContent) async {
     const String apiKeyEnv = 'VIVO_API_KEY';
     const String modelEnv = 'VIVO_MODEL_ID';
@@ -163,7 +163,11 @@ class HistoryRepository {
     return '数学问题';
   }
 
-  Future<File> _persistImage(File sourceImage) async {
+  Future<String> _persistImage(File sourceImage) async {
+    if (kIsWeb) {
+      return sourceImage.path;
+    }
+
     final Directory dir = await getApplicationDocumentsDirectory();
     final Directory imageDir = Directory(path.join(dir.path, 'history_images'));
     if (!await imageDir.exists()) {
@@ -187,7 +191,7 @@ class HistoryRepository {
       debugPrint('cleanup temp image failed: $e');
     }
 
-    return copied;
+    return copied.path;
   }
 
   Future<bool> isFirstLaunch() async {
@@ -210,7 +214,6 @@ class HistoryRepository {
     await prefs.setInt(_kGradeLevel, grade);
   }
 
-  // 新手引导
   Future<bool> isTutorialCompleted() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_kTutorialCompleted) ?? false;

@@ -3,7 +3,9 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:http/http.dart' as http;
@@ -13,7 +15,7 @@ import 'package:mathmate/pages/chat_home_page.dart';
 import 'package:mathmate/notes_page.dart';
 import 'package:mathmate/geogebra_page.dart';
 import 'package:mathmate/data/conversation_repository.dart';
-import 'package:mathmate/data/history_models.dart';
+import 'package:mathmate/data/hive_models.dart';
 import 'package:mathmate/data/history_repository.dart';
 import 'package:mathmate/data/video_resources.dart';
 import 'package:mathmate/grade_selection_page.dart';
@@ -31,6 +33,8 @@ import 'package:mathmate/tutorial_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: ".env");
+
   // 初始化设备ID
   final prefs = await SharedPreferences.getInstance();
   if (!prefs.containsKey('device_id')) {
@@ -40,16 +44,22 @@ Future<void> main() async {
       deviceId = deviceInfo.id;
     } else if (deviceInfo is IosDeviceInfo) {
       deviceId = deviceInfo.identifierForVendor ?? '';
+    } else if (kIsWeb) {
+      deviceId = 'web-${DateTime.now().millisecondsSinceEpoch}';
     }
     await prefs.setString('device_id', deviceId);
   }
 
-  await HistoryRepository.instance.init();
-  await ConversationRepository.instance.init();
+  if (kIsWeb) {
+    // Web: 跳过 Isar 初始化
+  } else {
+    await HistoryRepository.instance.init();
+    await ConversationRepository.instance.init();
+  }
   await ThemeService.instance.init();
 
-  final bool isFirst = await HistoryRepository.instance.isFirstLaunch();
-  final bool tutorialCompleted = await HistoryRepository.instance.isTutorialCompleted();
+  final bool isFirst = kIsWeb ? true : await HistoryRepository.instance.isFirstLaunch();
+  final bool tutorialCompleted = kIsWeb ? false : await HistoryRepository.instance.isTutorialCompleted();
   runApp(MathMateApp(
     checkFirstLaunch: isFirst,
     showTutorial: !tutorialCompleted && !isFirst,

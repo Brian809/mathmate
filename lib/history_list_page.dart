@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:mathmate/beautiful_result_page.dart';
-import 'package:mathmate/data/history_models.dart';
+import 'package:mathmate/data/hive_models.dart';
 import 'package:mathmate/data/history_repository.dart';
 
 class HistoryListPage extends StatefulWidget {

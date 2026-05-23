@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:mathmate/data/history_models.dart';
+import 'package:mathmate/data/hive_models.dart';
 import 'package:mathmate/data/history_repository.dart';
 import 'package:mathmate/data/video_resources.dart';
 

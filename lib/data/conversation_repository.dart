@@ -1,117 +1,95 @@
-import 'dart:io';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:mathmate/data/hive_conversation_models.dart';
 
-import 'package:path_provider/path_provider.dart';
-import 'package:isar/isar.dart';
-
-import 'conversation_models.dart';
+const String _kConversationBoxName = 'math_conversation';
 
 class ConversationRepository {
   ConversationRepository._();
   static final ConversationRepository instance = ConversationRepository._();
 
-  Isar? _isar;
+  Box<Conversation>? _box;
 
-  bool get isReady => _isar != null;
+  bool get isReady => _box != null && _box!.isOpen;
 
   Future<void> init() async {
-    if (_isar != null) return;
+    if (_box != null && _box!.isOpen) return;
 
-    final Directory dir = await getApplicationDocumentsDirectory();
-    _isar = await Isar.open(
-      <CollectionSchema>[ConversationSchema],
-      directory: dir.path,
-      name: 'mathmate_chat',
-    );
+    await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(4)) {
+      Hive.registerAdapter(ConversationAdapter());
+    }
+    if (!Hive.isAdapterRegistered(5)) {
+      Hive.registerAdapter(ChatMessageEmbeddedAdapter());
+    }
+
+    _box = await Hive.openBox<Conversation>(_kConversationBoxName);
   }
 
-  /// 创建新对话，返回带 id 的 Conversation
   Future<Conversation> createConversation(String title) async {
     await init();
-    final Conversation conversation = Conversation()
-      ..title = title
-      ..createdAt = DateTime.now()
-      ..updatedAt = DateTime.now();
-
-    await _isar!.writeTxn(() async {
-      await _isar!.conversations.put(conversation);
-    });
-
+    final Conversation conversation = Conversation.create(
+      title: title,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    conversation.id = DateTime.now().millisecondsSinceEpoch;
+    await _box!.put(conversation.id, conversation);
     return conversation;
   }
 
-  /// 向对话追加消息并更新 updatedAt
   Future<void> addMessage(
     int conversationId,
     ChatMessageEmbedded message,
   ) async {
     await init();
-    final Conversation? conversation =
-        await _isar!.conversations.get(conversationId);
+    final Conversation? conversation = _box!.get(conversationId);
     if (conversation == null) return;
 
-    conversation.messages = <ChatMessageEmbedded>[
-      ...conversation.messages,
-      message,
-    ];
+    conversation.messages = [...conversation.messages, message];
     conversation.updatedAt = message.timestamp;
-
-    await _isar!.writeTxn(() async {
-      await _isar!.conversations.put(conversation);
-    });
+    await conversation.save();
   }
 
-  /// 更新对话标题
   Future<void> updateTitle(int conversationId, String title) async {
     await init();
-    final Conversation? conversation =
-        await _isar!.conversations.get(conversationId);
+    final Conversation? conversation = _box!.get(conversationId);
     if (conversation == null) return;
 
     conversation.title = title;
-
-    await _isar!.writeTxn(() async {
-      await _isar!.conversations.put(conversation);
-    });
+    await conversation.save();
   }
 
-  /// 监听所有对话（按更新时间倒序）
   Stream<List<Conversation>> watchConversations() async* {
     await init();
-    final Isar isar = _isar!;
-    yield* isar.conversations.where().sortByUpdatedAtDesc().watch(
-          fireImmediately: true,
-        );
+    yield _box!.values.toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+    await for (final _ in _box!.watch()) {
+      yield _box!.values.toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    }
   }
 
-  /// 获取单个对话
   Future<Conversation?> getConversation(int id) async {
     await init();
-    return _isar!.conversations.get(id);
+    return _box!.get(id);
   }
 
-  /// 替换对话中的所有消息（用于删除/编辑消息后更新）
   Future<void> replaceMessages(
     int conversationId,
     List<ChatMessageEmbedded> messages,
   ) async {
     await init();
-    final Conversation? conversation =
-        await _isar!.conversations.get(conversationId);
+    final Conversation? conversation = _box!.get(conversationId);
     if (conversation == null) return;
 
     conversation.messages = messages;
     conversation.updatedAt = DateTime.now();
-
-    await _isar!.writeTxn(() async {
-      await _isar!.conversations.put(conversation);
-    });
+    await conversation.save();
   }
 
-  /// 删除对话
   Future<void> deleteConversation(int id) async {
     await init();
-    await _isar!.writeTxn(() async {
-      await _isar!.conversations.delete(id);
-    });
+    await _box!.delete(id);
   }
 }

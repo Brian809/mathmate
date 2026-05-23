@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mathmate/data/history_models.dart';
+import 'package:mathmate/data/hive_models.dart';
 import 'package:mathmate/data/history_repository.dart';
 import 'package:mathmate/models/pipeline_models.dart';
 import 'package:mathmate/models/pipeline_stage.dart';

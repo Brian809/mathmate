@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,11 +6,24 @@ import 'package:permission_handler/permission_handler.dart';
 class ScannerService {
   final ImagePicker _picker = ImagePicker();
 
-  Future<File?> startScanning(BuildContext context) async {
+  Future<dynamic> startScanning(BuildContext context) async {
     if (kIsWeb) {
-      debugPrint('ScannerService: web is not supported.');
+      // Web: 使用 image_picker 的 gallery 模式
+      try {
+        final XFile? photo = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 90,
+        );
+        if (photo != null) {
+          // Web 返回 blob URL 字符串
+          return photo.path;
+        }
+      } catch (e) {
+        debugPrint('ScannerService web pickImage error: $e');
+      }
       return null;
     }
+
     if (!context.mounted) {
       return null;
     }
@@ -67,11 +78,8 @@ class ScannerService {
       return null;
     }
 
-    final File file = File(photo.path);
-    if (await file.exists()) {
-      return file;
-    }
-    return null;
+    // 返回路径字符串，调用方根据平台自行处理
+    return photo.path;
   }
 
   Future<ImageSource?> _showSourcePicker(BuildContext context) async {
