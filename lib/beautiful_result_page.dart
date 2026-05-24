@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -10,6 +9,7 @@ import 'package:mathmate/data/hive_models.dart';
 import 'package:mathmate/data/history_repository.dart';
 import 'package:mathmate/models/pipeline_models.dart';
 import 'package:mathmate/models/pipeline_stage.dart';
+import 'package:mathmate/services/app_logger.dart';
 import 'package:mathmate/services/math_pipeline_service.dart';
 import 'package:mathmate/visualization/geometry_validator.dart';
 import 'package:mathmate/visualization/models.dart';
@@ -65,18 +65,28 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
 
   Future<void> _loadImageBytes() async {
     try {
+      AppLogger.instance.info('[ResultPage] 尝试加载图片: ${widget.image.path}');
       if (!await widget.image.exists()) {
-        debugPrint('Image file does not exist: ${widget.image.path}');
+        AppLogger.instance.error('[ResultPage] 图片文件不存在: ${widget.image.path}');
+        if (mounted) {
+          setState(() {
+            _stageErrors.add('图片文件不存在: ${widget.image.path}');
+          });
+        }
         return;
       }
       _imageBytes = await widget.image.readAsBytes();
-      if (!mounted) {
-        return;
-      }
+      AppLogger.instance.info('[ResultPage] 图片加载成功: ${_imageBytes!.length} 字节');
+      if (!mounted) return;
       setState(() {});
     } catch (e, stack) {
-      debugPrint('Error loading image bytes: $e');
-      debugPrint('$stack');
+      AppLogger.instance.error('[ResultPage] 图片加载失败: $e');
+      AppLogger.instance.error('[ResultPage] 堆栈: $stack');
+      if (mounted) {
+        setState(() {
+          _stageErrors.add('图片加载失败: $e');
+        });
+      }
     }
   }
 
@@ -88,32 +98,38 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
     });
 
     try {
+      AppLogger.instance.info('[ResultPage] ========== 开始 Pipeline ==========');
+      AppLogger.instance.info('[ResultPage] 图片路径: ${widget.image.path}');
       final PipelineResult result = await _pipelineService.runFromImage(
         XFile(widget.image.path),
         onStageChanged: (PipelineStage stage) {
-          if (!mounted) {
-            return;
-          }
+          if (!mounted) return;
           setState(() {
             _statusMessage = _messageForStage(stage);
           });
         },
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       final String questionMarkdown =
           result.recognize?.questionMarkdown.trim() ?? '';
       final String solutionMarkdown =
           result.solve?.solutionMarkdown.trim() ?? '';
-      // 调试：打印求解结果中的行内公式
-      debugPrint('[SolveResult] solutionMarkdown: ${solutionMarkdown.length} 字符');
+
+      AppLogger.instance.info('[ResultPage] 最终结果汇总:');
+      AppLogger.instance.info('[ResultPage]   - 识别: ${result.recognize != null ? "成功(${questionMarkdown.length}字符)" : "失败"}');
+      AppLogger.instance.info('[ResultPage]   - 解题: ${result.solve != null ? "成功(${solutionMarkdown.length}字符)" : "失败"}');
+      AppLogger.instance.info('[ResultPage]   - 可视化: ${result.visualize?.scene != null ? "有图形" : (result.visualize?.error ?? "无")}');
+      if (result.stageErrors.isNotEmpty) {
+        AppLogger.instance.warn('[ResultPage]   - 阶段错误: ${result.stageErrors.join("; ")}');
+      }
+
+      // 打印求解结果中的行内公式
       final RegExp dollarPattern = RegExp(r'\$[^\$\n]+\$');
       for (final Match m in dollarPattern.allMatches(solutionMarkdown)) {
         final String f = m.group(0)!;
-        if (f.length < 80) debugPrint('[SolveResult] 行内公式: $f');
+        if (f.length < 80) AppLogger.instance.info('[SolveResult] 行内公式: $f');
       }
       final String formulaPreview = _extractFormulaPreview(
         '$questionMarkdown\n$solutionMarkdown',
@@ -140,8 +156,8 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
         _persistHistoryAsync();
       }
     } catch (e, stack) {
-      debugPrint('Pipeline error: $e');
-      debugPrint('$stack');
+      AppLogger.instance.error('[ResultPage] Pipeline 异常: $e');
+      AppLogger.instance.error('[ResultPage] 堆栈: $stack');
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
@@ -234,6 +250,7 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
 
   Future<void> _persistHistoryAsync() async {
     try {
+      AppLogger.instance.info('[ResultPage] 开始保存历史记录...');
       await HistoryRepository.instance.saveHistory(
         sourceImage: widget.image,
         ocrContent: _questionMarkdown,
@@ -241,8 +258,10 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
         latexResult: _cleanLatex(_formulaPreview ?? _solutionMarkdown),
         sceneMap: _geometryScene,
       );
-    } catch (e) {
-      debugPrint('save history failed: $e');
+      AppLogger.instance.info('[ResultPage] 历史记录保存成功');
+    } catch (e, stack) {
+      AppLogger.instance.error('[ResultPage] 历史记录保存失败: $e');
+      AppLogger.instance.error('[ResultPage] 堆栈: $stack');
     }
   }
 
@@ -387,6 +406,98 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('✅ 公式已复制')));
     }
+  }
+
+  void _showLogViewer() {
+    final String logContent = AppLogger.instance.export();
+    final TextEditingController logController = TextEditingController(
+      text: logContent,
+    );
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (BuildContext context, ScrollController scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      const Icon(Icons.bug_report, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '调试日志',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${logContent.length} 字符',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.copy, size: 18),
+                        tooltip: '复制全部日志',
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: logContent));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('日志已复制到剪贴板')),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        tooltip: '清空日志',
+                        onPressed: () {
+                          AppLogger.instance.clear();
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('日志已清空')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: TextField(
+                      controller: logController,
+                      maxLines: null,
+                      expands: true,
+                      readOnly: true,
+                      textAlignVertical: TextAlignVertical.top,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        height: 1.3,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showFullImageViewer() {
@@ -833,6 +944,23 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
                           (String error) => Text(
                             '• $error',
                             style: const TextStyle(color: Colors.redAccent),
+                          ),
+                        ),
+                      ],
+                      if (!_isAnalyzing) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _showLogViewer,
+                            icon: const Icon(Icons.bug_report, size: 16),
+                            label: const Text('查看调试日志',
+                                style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.grey.shade600,
+                              side: BorderSide(color: Colors.grey.shade300),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
                           ),
                         ),
                       ],

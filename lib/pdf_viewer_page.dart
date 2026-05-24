@@ -36,6 +36,10 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   double _strokeWidth = 3.0;
   _PdfMode _mode = _PdfMode.view;
 
+  final TransformationController _transformController =
+      TransformationController();
+  final GlobalKey _interactiveViewerKey = GlobalKey();
+
   Note get _note => widget.note;
 
   List<HandwritingStroke> get _currentStrokes =>
@@ -139,15 +143,13 @@ $pdfJsSrc
     var pdfDoc = null;
     var currentPage = 1;
     var totalPages = 0;
-    var scale = 1.0;
+    var scale = Math.max(window.devicePixelRatio || 1, 2.0);
 
     function renderPage(num) {
       pdfDoc.getPage(num).then(function(page) {
         var container = document.getElementById('container');
         var canvas = document.createElement('canvas');
         canvas.id = 'page-' + num;
-        canvas.style.width = '95%';
-        canvas.style.maxWidth = '800px';
         var ctx = canvas.getContext('2d');
         var viewport = page.getViewport({scale: scale});
         canvas.height = viewport.height;
@@ -155,11 +157,12 @@ $pdfJsSrc
         container.appendChild(canvas);
 
         var maxWidth = Math.min(window.innerWidth * 0.95, 800);
-        if (viewport.width > maxWidth) {
-          var ratio = maxWidth / viewport.width;
-          canvas.style.width = maxWidth + 'px';
-          canvas.style.height = (viewport.height * ratio) + 'px';
-        }
+        var maxHeight = window.innerHeight * 0.85;
+        var ratioW = maxWidth / viewport.width;
+        var ratioH = maxHeight / viewport.height;
+        var ratio = Math.min(ratioW, ratioH);
+        canvas.style.width = (viewport.width * ratio) + 'px';
+        canvas.style.height = (viewport.height * ratio) + 'px';
 
         page.render({canvasContext: ctx, viewport: viewport}).promise.then(function() {
           window.flutterMessage.postMessage(JSON.stringify({
@@ -244,15 +247,26 @@ $pdfJsSrc
     _controller.runJavaScript('goToPage($page);');
   }
 
+  Offset _toPdfSpace(Offset globalPosition) {
+    final RenderBox? box =
+        _interactiveViewerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return globalPosition;
+    final Offset localInViewer = box.globalToLocal(globalPosition);
+    final Matrix4 inverse = Matrix4.inverted(_transformController.value);
+    return MatrixUtils.transformPoint(inverse, localInViewer);
+  }
+
   void _onPanStart(DragStartDetails details) {
+    final pdfPoint = _toPdfSpace(details.globalPosition);
     setState(() {
-      _currentPoints = [details.localPosition];
+      _currentPoints = [pdfPoint];
     });
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
+    final pdfPoint = _toPdfSpace(details.globalPosition);
     setState(() {
-      _currentPoints.add(details.localPosition);
+      _currentPoints.add(pdfPoint);
     });
   }
 
@@ -449,23 +463,36 @@ $pdfJsSrc
                   child: Stack(
                     children: [
                       InteractiveViewer(
+                        key: _interactiveViewerKey,
+                        transformationController: _transformController,
                         panEnabled: _mode == _PdfMode.view,
                         scaleEnabled: _mode == _PdfMode.view,
                         minScale: 0.5,
                         maxScale: 5.0,
-                        child: WebViewWidget(controller: _controller),
-                      ),
-                      IgnorePointer(
-                        child: CustomPaint(
-                          painter: _PdfStrokePainter(
-                            strokes: _currentStrokes,
-                            currentPoints: _currentPoints,
-                            currentColor: _mode == _PdfMode.eraser
-                                ? Colors.grey.withValues(alpha: 0.3)
-                                : _selectedColor,
-                            currentWidth: _mode == _PdfMode.eraser ? 24.0 : _strokeWidth,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Stack(
+                            children: [
+                              WebViewWidget(controller: _controller),
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: CustomPaint(
+                                    painter: _PdfStrokePainter(
+                                      strokes: _currentStrokes,
+                                      currentPoints: _currentPoints,
+                                      currentColor: _mode == _PdfMode.eraser
+                                          ? Colors.grey.withValues(alpha: 0.3)
+                                          : _selectedColor,
+                                      currentWidth: _mode == _PdfMode.eraser
+                                          ? 24.0
+                                          : _strokeWidth,
+                                    ),
+                                    size: Size.infinite,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          size: Size.infinite,
                         ),
                       ),
                       if (_mode != _PdfMode.view)
