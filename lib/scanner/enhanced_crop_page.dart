@@ -44,6 +44,7 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
         builder: (context, constraints) {
           return GestureDetector(
             onPanStart: (details) {
+              if (constraints.maxWidth <= 0 || constraints.maxHeight <= 0) return;
               final relativeX =
                   details.localPosition.dx / constraints.maxWidth;
               final relativeY =
@@ -69,6 +70,7 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
               _lastTouchDy = relativeY;
             },
             onPanUpdate: (details) {
+              if (constraints.maxWidth <= 0 || constraints.maxHeight <= 0) return;
               final relativeX =
                   details.localPosition.dx / constraints.maxWidth;
               final relativeY =
