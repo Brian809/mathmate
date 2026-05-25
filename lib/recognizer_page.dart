@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mathmate/beautiful_result_page.dart';
 import 'package:mathmate/scanner/enhanced_crop_page.dart';
+import 'package:mathmate/services/app_logger.dart';
+import 'package:path_provider/path_provider.dart';
 
 class RecognizerPage extends StatefulWidget {
   const RecognizerPage({super.key});
@@ -17,29 +19,62 @@ class _RecognizerPageState extends State<RecognizerPage> {
   final ImagePicker _picker = ImagePicker();
   XFile? _image;
 
+  Future<File> _copyToTempFile(XFile xfile) async {
+    final dir = await getTemporaryDirectory();
+    final tempFile = File('${dir.path}/crop_input_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    final bytes = await xfile.readAsBytes();
+    await tempFile.writeAsBytes(bytes);
+    AppLogger.instance.info('[Recognizer] copied ${bytes.length} bytes to ${tempFile.path}');
+    return tempFile;
+  }
+
   Future<void> _processImage(ImageSource source) async {
-    final XFile? selected = await _picker.pickImage(source: source);
-    if (selected == null || !mounted) return;
+    try {
+      AppLogger.instance.info('[Recognizer] picking image from $source...');
+      final XFile? selected = await _picker.pickImage(source: source);
+      if (selected == null) {
+        AppLogger.instance.info('[Recognizer] user cancelled pick');
+        return;
+      }
+      AppLogger.instance.info('[Recognizer] picked: path=${selected.path}, name=${selected.name}');
+      if (!mounted) return;
 
-    final File? croppedFile = await Navigator.push<File>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EnhancedCropPage(imageFile: File(selected.path)),
-      ),
-    );
+      final imageFile = await _copyToTempFile(selected);
 
-    if (croppedFile == null || !mounted) return;
+      if (!mounted) return;
+      AppLogger.instance.info('[Recognizer] navigating to crop page...');
+      final File? croppedFile = await Navigator.push<File>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EnhancedCropPage(imageFile: imageFile),
+        ),
+      );
 
-    setState(() {
-      _image = XFile(croppedFile.path);
-    });
+      if (croppedFile == null) {
+        AppLogger.instance.info('[Recognizer] crop cancelled');
+        return;
+      }
+      if (!mounted) return;
+      AppLogger.instance.info('[Recognizer] cropped: ${croppedFile.path}');
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => BeautifulResultPage(image: croppedFile),
-      ),
-    );
+      setState(() {
+        _image = XFile(croppedFile.path);
+      });
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BeautifulResultPage(image: croppedFile),
+        ),
+      );
+    } catch (e, stack) {
+      AppLogger.instance.error('[Recognizer] error: $e\n$stack');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('选取图片失败: $e')),
+        );
+      }
+    }
   }
 
   @override

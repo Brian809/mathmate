@@ -20,7 +20,7 @@ class PdfViewerPage extends StatefulWidget {
 }
 
 class _PdfViewerPageState extends State<PdfViewerPage> {
-  late final WebViewController _controller;
+  WebViewController? _controller;
   int _currentPage = 1;
   int _totalPages = 1;
   bool _isLoading = true;
@@ -35,6 +35,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   Color _selectedColor = Colors.black;
   double _strokeWidth = 3.0;
   _PdfMode _mode = _PdfMode.view;
+
 
   Note get _note => widget.note;
 
@@ -123,8 +124,11 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; overflow-x: hidden; }
     body { background: #525659; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
-    canvas { margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    canvas { margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: block; }
+    .page-wrapper { position: relative; display: inline-block; margin: 10px 0; }
+    .page-wrapper svg { position: absolute; top: 0; left: 0; pointer-events: none; }
     .page-container { display: flex; flex-direction: column; align-items: center; padding: 20px 0; }
   </style>
   <script>
@@ -139,27 +143,48 @@ $pdfJsSrc
     var pdfDoc = null;
     var currentPage = 1;
     var totalPages = 0;
-    var scale = 1.0;
+    var scale = Math.max(window.devicePixelRatio || 1, 2.0);
+    var currentCssRatio = 1.0;
+    var pageWrappers = {};
 
     function renderPage(num) {
       pdfDoc.getPage(num).then(function(page) {
         var container = document.getElementById('container');
+        var wrapper = document.createElement('div');
+        wrapper.className = 'page-wrapper';
+        wrapper.id = 'wrapper-' + num;
+
         var canvas = document.createElement('canvas');
         canvas.id = 'page-' + num;
-        canvas.style.width = '95%';
-        canvas.style.maxWidth = '800px';
         var ctx = canvas.getContext('2d');
         var viewport = page.getViewport({scale: scale});
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        container.appendChild(canvas);
+
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.id = 'svg-' + num;
+
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(svg);
+        container.appendChild(wrapper);
 
         var maxWidth = Math.min(window.innerWidth * 0.95, 800);
-        if (viewport.width > maxWidth) {
-          var ratio = maxWidth / viewport.width;
-          canvas.style.width = maxWidth + 'px';
-          canvas.style.height = (viewport.height * ratio) + 'px';
-        }
+        var maxHeight = window.innerHeight * 0.85;
+        var ratioW = maxWidth / viewport.width;
+        var ratioH = maxHeight / viewport.height;
+        var ratio = Math.min(ratioW, ratioH);
+        currentCssRatio = ratio;
+
+        var cssW = (viewport.width * ratio) + 'px';
+        var cssH = (viewport.height * ratio) + 'px';
+        canvas.style.width = cssW;
+        canvas.style.height = cssH;
+        svg.setAttribute('width', viewport.width * ratio);
+        svg.setAttribute('height', viewport.height * ratio);
+        svg.style.width = cssW;
+        svg.style.height = cssH;
+
+        pageWrappers[num] = { wrapper: wrapper, canvas: canvas, svg: svg, ratio: ratio, viewportW: viewport.width, viewportH: viewport.height };
 
         page.render({canvasContext: ctx, viewport: viewport}).promise.then(function() {
           window.flutterMessage.postMessage(JSON.stringify({
@@ -169,6 +194,43 @@ $pdfJsSrc
           }));
         });
       });
+    }
+
+    function injectStrokes(pageNum, base64Data) {
+      var wrapper = pageWrappers[pageNum];
+      if (!wrapper) return;
+      var rect = wrapper.canvas.getBoundingClientRect();
+      while (wrapper.svg.firstChild) {
+        wrapper.svg.removeChild(wrapper.svg.firstChild);
+      }
+      if (!base64Data) return;
+      var jsonStr = atob(base64Data);
+      var strokes = JSON.parse(jsonStr);
+      strokes.forEach(function(stroke) {
+        if (!stroke.p || stroke.p.length === 0) return;
+        var d = '';
+        for (var i = 0; i < stroke.p.length; i++) {
+          var x = (stroke.p[i].x - rect.left).toFixed(1);
+          var y = (stroke.p[i].y - rect.top).toFixed(1);
+          d += (i === 0 ? 'M' : ' L') + x + ' ' + y;
+        }
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', stroke.c);
+        path.setAttribute('stroke-width', stroke.w);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        wrapper.svg.appendChild(path);
+      });
+    }
+
+    function clearSvg(pageNum) {
+      var wrapper = pageWrappers[pageNum];
+      if (!wrapper) return;
+      while (wrapper.svg.firstChild) {
+        wrapper.svg.removeChild(wrapper.svg.firstChild);
+      }
     }
 
     function loadPdf(base64Data) {
@@ -190,6 +252,7 @@ $pdfJsSrc
       if (num < 1 || num > totalPages) return;
       currentPage = num;
       document.getElementById('container').innerHTML = '';
+      pageWrappers = {};
       renderPage(currentPage);
     }
 
@@ -231,6 +294,9 @@ $pdfJsSrc
                   _isLoading = false;
                 });
               }
+              if (map['type'] == 'pageRendered') {
+                _injectStrokesToWebView();
+              }
             }
           } catch (_) {}
         },
@@ -241,7 +307,21 @@ $pdfJsSrc
   void _goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
     setState(() => _currentPage = page);
-    _controller.runJavaScript('goToPage($page);');
+    _controller?.runJavaScript('goToPage($page);');
+  }
+
+  void _injectStrokesToWebView() {
+    final strokes = _pageStrokes[_currentPage];
+    String base64Data = '';
+    if (strokes != null && strokes.isNotEmpty) {
+      final data = strokes.where((s) => s.points.isNotEmpty).map((s) => {
+        'p': s.points.map((p) => {'x': p.dx, 'y': p.dy}).toList(),
+        'c': '#${(s.color.r * 255).round().toRadixString(16).padLeft(2, '0')}${(s.color.g * 255).round().toRadixString(16).padLeft(2, '0')}${(s.color.b * 255).round().toRadixString(16).padLeft(2, '0')}',
+        'w': s.width,
+      }).toList();
+      base64Data = base64Encode(utf8.encode(jsonEncode(data)));
+    }
+    _controller?.runJavaScript("injectStrokes($_currentPage, '$base64Data');");
   }
 
   void _onPanStart(DragStartDetails details) {
@@ -261,6 +341,7 @@ $pdfJsSrc
     if (_mode == _PdfMode.eraser) {
       _eraseStrokes();
       setState(() => _currentPoints.clear());
+      _injectStrokesToWebView();
       return;
     }
     setState(() {
@@ -272,6 +353,7 @@ $pdfJsSrc
       _currentPoints.clear();
       _isDirty = true;
     });
+    _injectStrokesToWebView();
   }
 
   void _undo() {
@@ -281,6 +363,7 @@ $pdfJsSrc
         _isDirty = true;
       }
     });
+    _injectStrokesToWebView();
   }
 
   void _clearPage() {
@@ -288,6 +371,7 @@ $pdfJsSrc
       _currentStrokes.clear();
       _isDirty = true;
     });
+    _controller?.runJavaScript('clearSvg($_currentPage);');
   }
 
   void _eraseStrokes() {
@@ -448,17 +532,12 @@ $pdfJsSrc
                 Expanded(
                   child: Stack(
                     children: [
-                      InteractiveViewer(
-                        panEnabled: _mode == _PdfMode.view,
-                        scaleEnabled: _mode == _PdfMode.view,
-                        minScale: 0.5,
-                        maxScale: 5.0,
-                        child: WebViewWidget(controller: _controller),
-                      ),
+                      if (!_isLoading && _controller != null)
+                        WebViewWidget(controller: _controller!),
                       IgnorePointer(
                         child: CustomPaint(
                           painter: _PdfStrokePainter(
-                            strokes: _currentStrokes,
+                            strokes: const [],
                             currentPoints: _currentPoints,
                             currentColor: _mode == _PdfMode.eraser
                                 ? Colors.grey.withValues(alpha: 0.3)

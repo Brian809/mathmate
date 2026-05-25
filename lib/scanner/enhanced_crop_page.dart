@@ -19,6 +19,13 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
   double _leftPercent = 0.1;
   double _rightPercent = 0.9;
 
+  // 整体拖拽状态
+  bool _isMovingBox = false;
+  double _lastTouchDx = 0;
+  double _lastTouchDy = 0;
+
+  static const double _edgeThreshold = 0.04;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,21 +36,86 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.check, color: Colors.blue),
-            onPressed: _processCrop, // 执行裁剪逻辑
+            onPressed: _processCrop,
           ),
         ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return GestureDetector(
+            onPanStart: (details) {
+              if (constraints.maxWidth <= 0 || constraints.maxHeight <= 0) return;
+              final relativeX =
+                  details.localPosition.dx / constraints.maxWidth;
+              final relativeY =
+                  details.localPosition.dy / constraints.maxHeight;
+
+              final distTop = (relativeY - _topPercent).abs();
+              final distBottom = (relativeY - _bottomPercent).abs();
+              final distLeft = (relativeX - _leftPercent).abs();
+              final distRight = (relativeX - _rightPercent).abs();
+
+              final isInside = relativeX > _leftPercent &&
+                  relativeX < _rightPercent &&
+                  relativeY > _topPercent &&
+                  relativeY < _bottomPercent;
+
+              final isNearEdge = distTop < _edgeThreshold ||
+                  distBottom < _edgeThreshold ||
+                  distLeft < _edgeThreshold ||
+                  distRight < _edgeThreshold;
+
+              _isMovingBox = isInside && !isNearEdge;
+              _lastTouchDx = relativeX;
+              _lastTouchDy = relativeY;
+            },
             onPanUpdate: (details) {
+              if (constraints.maxWidth <= 0 || constraints.maxHeight <= 0) return;
               final relativeX =
                   details.localPosition.dx / constraints.maxWidth;
               final relativeY =
                   details.localPosition.dy / constraints.maxHeight;
 
               setState(() {
-                // 计算触摸点到四条边的距离
+                if (_isMovingBox) {
+                  final dx = relativeX - _lastTouchDx;
+                  final dy = relativeY - _lastTouchDy;
+                  final boxWidth = _rightPercent - _leftPercent;
+                  final boxHeight = _bottomPercent - _topPercent;
+
+                  double newLeft = _leftPercent + dx;
+                  double newRight = _rightPercent + dx;
+                  double newTop = _topPercent + dy;
+                  double newBottom = _bottomPercent + dy;
+
+                  if (newLeft < 0) {
+                    newLeft = 0;
+                    newRight = boxWidth;
+                  }
+                  if (newRight > 1) {
+                    newRight = 1;
+                    newLeft = 1 - boxWidth;
+                  }
+                  if (newTop < 0) {
+                    newTop = 0;
+                    newBottom = boxHeight;
+                  }
+                  if (newBottom > 1) {
+                    newBottom = 1;
+                    newTop = 1 - boxHeight;
+                  }
+
+                  _leftPercent = newLeft.clamp(0.0, 1.0);
+                  _rightPercent = newRight.clamp(0.0, 1.0);
+                  _topPercent = newTop.clamp(0.0, 1.0);
+                  _bottomPercent = newBottom.clamp(0.0, 1.0);
+
+                  _lastTouchDx = relativeX;
+                  _lastTouchDy = relativeY;
+                  return;
+                }
+
+                // 边缘拖拽（原有逻辑）
                 final distTop = (relativeY - _topPercent).abs();
                 final distBottom = (relativeY - _bottomPercent).abs();
                 final distLeft = (relativeX - _leftPercent).abs();
@@ -66,6 +138,9 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
                   _rightPercent = relativeX.clamp(_leftPercent, 1.0);
                 }
               });
+            },
+            onPanEnd: (_) {
+              _isMovingBox = false;
             },
             child: Stack(
               children: [

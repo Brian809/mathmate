@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:mathmate/services/app_logger.dart';
 
 class VolcAiClientService {
   static const String _apiKeyEnv = 'VOLC_API_KEY';
@@ -30,6 +30,9 @@ class VolcAiClientService {
   }) async {
     final List<int> bytes = await imageFile.readAsBytes();
     final String base64Image = base64Encode(bytes);
+    AppLogger.instance.info('[VolcVision] 图片大小: ${bytes.length} 字节 (${(bytes.length / 1024).toStringAsFixed(1)} KB)');
+    AppLogger.instance.info('[VolcVision] base64 长度: ${base64Image.length} 字符');
+    AppLogger.instance.info('[VolcVision] system prompt 长度: ${prompt.length} 字符');
 
     return _request(
       modelEnv: modelEnv,
@@ -77,6 +80,10 @@ class VolcAiClientService {
     final String requestFormat =
         (dotenv.env[_requestFormatEnv] ?? 'auto').trim().toLowerCase();
 
+    AppLogger.instance.info('[Volc] 模型 env: $modelEnv，实际 modelId: $modelId');
+    AppLogger.instance.info('[Volc] 端点: $baseUrl');
+    AppLogger.instance.info('[Volc] 请求格式: $requestFormat');
+
     if (apiKey.isEmpty) {
       throw Exception('Missing env config: VOLC_API_KEY');
     }
@@ -89,13 +96,17 @@ class VolcAiClientService {
       'Authorization': 'Bearer $apiKey',
     };
 
+    final Stopwatch sw = Stopwatch()..start();
     late http.Response response;
     if (requestFormat == 'messages') {
       response = await _postMessages(baseUrl, headers, modelId, messages);
+      AppLogger.instance.info('[Volc] messages 格式响应状态: ${response.statusCode}');
     } else if (requestFormat == 'input') {
       response = await _postInput(baseUrl, headers, modelId, messages);
+      AppLogger.instance.info('[Volc] input 格式响应状态: ${response.statusCode}');
     } else {
       response = await _postMessages(baseUrl, headers, modelId, messages);
+      AppLogger.instance.info('[Volc] auto: 先尝试 messages 格式，状态=${response.statusCode}');
       final String detail = utf8.decode(response.bodyBytes);
       final String normalizedDetail = detail.toLowerCase();
       final bool unknownMessagesField =
@@ -103,19 +114,34 @@ class VolcAiClientService {
           (normalizedDetail.contains('unknown field') ||
               normalizedDetail.contains('unknownfield'));
       if (response.statusCode != 200 && unknownMessagesField) {
+        AppLogger.instance.warn('[Volc] auto: messages 格式被拒，切换到 input 格式重试');
         response = await _postInput(baseUrl, headers, modelId, messages);
+        AppLogger.instance.info('[Volc] auto: input 格式响应状态=${response.statusCode}');
       }
     }
+    sw.stop();
+    AppLogger.instance.info('[Volc] 请求耗时: ${sw.elapsedMilliseconds}ms');
 
     if (response.statusCode != 200) {
       final String detail = utf8.decode(response.bodyBytes);
-      debugPrint('Volc API error($modelEnv): $detail');
+      AppLogger.instance.error('[Volc] 错误响应体($modelEnv): $detail');
       throw Exception('Volc API error($modelEnv): $detail');
     }
 
-    final dynamic data = jsonDecode(utf8.decode(response.bodyBytes));
+    final String rawBody = utf8.decode(response.bodyBytes);
+    AppLogger.instance.info('[Volc] 响应体长度: ${rawBody.length} 字符');
+    final dynamic data = jsonDecode(rawBody);
     final String parsed = _extractContentFromResponse(data).trim();
+
+    AppLogger.instance.info('[Volc] 提取内容长度: ${parsed.length} 字符');
+    if (parsed.length <= 500) {
+      AppLogger.instance.info('[Volc] 响应内容: $parsed');
+    } else {
+      AppLogger.instance.info('[Volc] 响应预览(前500字): ${parsed.substring(0, 500)}...');
+    }
+
     if (parsed.isEmpty) {
+      AppLogger.instance.warn('[Volc] 提取内容为空！原始响应: $rawBody');
       throw Exception('Volc API returned empty content ($modelEnv).');
     }
     return parsed;
