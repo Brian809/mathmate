@@ -1,0 +1,47 @@
+# ============================================================
+# MathMate Nginx 配置
+# Ubuntu 路径: /etc/nginx/sites-available/mathmate.top
+# 启用: sudo ln -s /etc/nginx/sites-available/mathmate.top /etc/nginx/sites-enabled/
+# ============================================================
+
+server {
+    listen 80;
+    server_name mathmate.top www.mathmate.top;
+
+    # Flutter Web 静态文件
+    root /var/www/mathmate;
+    index index.html;
+
+    # ========== API 代理 ==========
+    # Flutter Web 调用 /api/deepseek、/api/vivo、/api/volc
+    # Nginx 转发到本地 Node.js 代理（3001 端口）
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+
+        # 大请求超时（AI 响应可能较慢）
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+
+    # ========== Flutter Web SPA 路由 ==========
+    # 必须，否则刷新页面会 404
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # ========== 静态资源缓存 ==========
+    location ~* \.(js|css|png|jpg|gif|ico|svg|woff2|wasm)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # ========== 禁止访问隐藏文件 ==========
+    location ~ /\. {
+        deny all;
+    }
+}
+
+# HTTPS 会在 certbot 运行后自动追加在此配置下方

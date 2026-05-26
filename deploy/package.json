@@ -1,0 +1,13 @@
+{
+  "name": "mathmate-proxy",
+  "version": "1.0.0",
+  "description": "MathMate API Proxy - 转发 API 请求到 DeepSeek/Vivo/Volc",
+  "main": "proxy_server.js",
+  "scripts": {
+    "start": "node proxy_server.js",
+    "daemon": "pm2 start proxy_server.js --name mathmate-proxy"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
