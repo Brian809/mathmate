@@ -90,14 +90,16 @@ class FormulaAnalysisService {
     }
   }
 
+  /// 从文本中提取 JSON 对象。
+  /// 从最后一个 '}' 向前找匹配的 '{'，避免 visualization HTML 中的花括号干扰。
   String _extractJson(String text) {
-    final start = text.indexOf('{');
-    if (start < 0) return text;
+    final int lastClose = text.lastIndexOf('}');
+    if (lastClose < 0) return text;
     int depth = 0;
-    for (int i = start; i < text.length; i++) {
-      if (text[i] == '{') depth++;
-      if (text[i] == '}') depth--;
-      if (depth == 0) return text.substring(start, i + 1);
+    for (int i = lastClose; i >= 0; i--) {
+      if (text[i] == '}') depth++;
+      if (text[i] == '{') depth--;
+      if (depth == 0) return text.substring(i, lastClose + 1);
     }
     return text;
   }
