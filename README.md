@@ -1,14 +1,27 @@
 # MathMate — 智能数学学习助手
 
 <p align="center">
+  <img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/poster.png" alt="MathMate" width="500">
+</p>
+
+<p align="center">
   <strong>AI 驱动 · 动态可视化 · 一站式数学学习</strong>
 </p>
 
 <p align="center">
-  <a href="https://mathmate.top">官网</a> ·
-  <a href="https://www.bilibili.com/video/BV1EfLJ6bEnw">演示视频</a> ·
-  <a href="https://github.com/mzk-C4/mathmate">GitHub</a>
+  <a href="https://www.bilibili.com/video/BV1EfLJ6bEnw">🎬 演示视频</a> ·
+  <a href="https://mathmate.top">🌐 官网</a> ·
+  <a href="https://github.com/mzk-C4/mathmate">📂 GitHub</a> ·
+  <a href="https://pan.baidu.com/s/1aAbJhw9xCIevHPjnrJW-8w?pwd=emu9">📦 下载 APK</a>
 </p>
+
+<p align="center">
+  <a href="https://www.bilibili.com/video/BV1EfLJ6bEnw" target="_blank">
+    <img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/real-scene.png" alt="MathMate 演示" width="600">
+  </a>
+</p>
+
+<p align="center">👆 点击图片观看演示视频</p>
 
 ---
 
@@ -50,6 +63,31 @@
 - **用户资料**：昵称、头像、年级、个性签名
 - **主题切换**：亮色 / 暗色 / 跟随系统
 - **搜题历史**：本地搜索记录浏览与清空
+
+## 产品截图
+
+<table>
+  <tr>
+    <td align="center"><b>应用首页</b></td>
+    <td align="center"><b>拍照识别</b></td>
+    <td align="center"><b>AI 解题</b></td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260507224931_199_31.jpg" width="250"></td>
+    <td><img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260508204749_218_31.jpg" width="250"></td>
+    <td><img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260508204844_225_31.jpg" width="250"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>AI 对话助手</b></td>
+    <td align="center"><b>手写笔记</b></td>
+    <td align="center"><b>数学工具箱</b></td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260507224940_209_31.jpg" width="250"></td>
+    <td><img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260508201708_217_31.png" width="250"></td>
+    <td><img src="https://raw.githubusercontent.com/mzk-C4/Matemate-website/main/images/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20260507224932_201_31.jpg" width="250"></td>
+  </tr>
+</table>
 
 ## 技术架构
 
@@ -280,6 +318,7 @@ MathMate 的开发过程中学习并参考了以下优秀开源项目：
 ## 相关链接
 
 - **官网**：[mathmate.top](https://mathmate.top)
+- **项目展示页**：[GitHub Pages](https://mzk-c4.github.io/Matemate-website/)
 - **演示视频**：[Bilibili](https://www.bilibili.com/video/BV1EfLJ6bEnw)
 - **源代码**：[GitHub](https://github.com/mzk-C4/mathmate)
 
