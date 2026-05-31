@@ -223,6 +223,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                         ], text: '分享笔记图片');
                       }
                     } catch (e) {
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('图片生成失败，请稍后再试')),
                       );
@@ -257,6 +258,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                         XFile(mdFile.path),
                       ], text: '导出Markdown文件');
                     } catch (e) {
+                      if (!mounted) return;
                       ScaffoldMessenger.of(
                         context,
                       ).showSnackBar(const SnackBar(content: Text('导出失败')));
@@ -650,7 +652,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),

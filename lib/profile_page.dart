@@ -5,7 +5,10 @@ import 'package:mathmate/data/history_repository.dart';
 import 'package:mathmate/grade_selection_page.dart';
 import 'package:mathmate/help_support_page.dart';
 import 'package:mathmate/history_list_page.dart';
+import 'package:mathmate/pages/login_page.dart';
+import 'package:mathmate/services/auth_service.dart';
 import 'package:mathmate/services/theme_service.dart';
+import 'package:mathmate/services/update_service.dart';
 import 'package:mathmate/services/user_profile_service.dart';
 import 'package:mathmate/tutorial_page.dart';
 
@@ -145,6 +148,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 10),
                   _MenuCard(
+                    icon: Icons.system_update_rounded,
+                    title: '检查更新 (v${UpdateService.currentVersion})',
+                    onTap: () => _checkUpdate(context),
+                  ),
+                  const SizedBox(height: 10),
+                  _MenuCard(
                     icon: Icons.info_outline_rounded,
                     title: '关于 MathMate',
                     onTap: () {
@@ -240,7 +249,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildHeader(ColorScheme cs) {
-    final profile = _profileService.profile;
+    final auth = AuthService();
     return Align(
       alignment: Alignment.center,
       child: Column(
@@ -268,39 +277,79 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(height: 14),
-          Text(
-            profile.nickname,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: cs.onSurface,
+          if (auth.isLoggedIn && auth.user != null) ...[
+            Text(auth.user!.username,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cs.onSurface)),
+            const SizedBox(height: 4),
+            Text(auth.user!.role == 'admin' ? '管理员' : auth.user!.role == 'dev' ? '开发者' : '用户',
+              style: TextStyle(fontSize: 13, color: cs.onSurface.withValues(alpha: 0.5))),
+          ] else ...[
+            Text('未登录',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cs.onSurface)),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+                if (mounted) setState(() {});
+              },
+              icon: const Icon(Icons.login, size: 16),
+              label: const Text('登录 / 注册'),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            profile.grade,
-            style: TextStyle(fontSize: 13, color: cs.onSurface.withValues(alpha: 0.5)),
-          ),
+          ],
         ],
       ),
     );
   }
 
+  Future<void> _checkUpdate(BuildContext context) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在检查更新...'), duration: Duration(seconds: 1)),
+    );
+    final update = await UpdateService.checkUpdate();
+    if (!mounted) return;
+    if (update == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已是最新版本'), duration: Duration(seconds: 2)),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('发现新版本'),
+          content: Text('最新版本: ${update.version}\n\n${update.releaseNotes}'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('稍后')),
+            FilledButton(onPressed: () { Navigator.pop(ctx); UpdateService.openUpdate(update); }, child: const Text('立即更新')),
+          ],
+        ),
+      );
+    }
+  }
+
   void _showLogoutDialog(BuildContext context) {
+    final auth = AuthService();
+    if (!auth.isLoggedIn) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginPage()));
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('退出登录'),
-        content: const Text('确定要退出登录吗？'),
+        content: Text('确定以 ${auth.user?.username ?? ""} 的身份退出吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              await auth.logout();
+              if (!ctx.mounted) return;
               Navigator.pop(ctx);
-              _profileService.reset();
+              if (mounted) setState(() {});
             },
             child: const Text('确定'),
           ),

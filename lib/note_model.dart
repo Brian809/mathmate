@@ -37,7 +37,7 @@ class Note {
       'content': content,
       'createTime': createTime.toIso8601String(),
       'updateTime': updateTime.toIso8601String(),
-      'textColor': textColor.value.toString(),
+      'textColor': textColor.toARGB32().toString(),
       'imagePaths': imagePaths,
       'isFavorite': isFavorite,
       'category': category,
@@ -80,7 +80,7 @@ class Note {
       createTime: _parseDateTime(json['createTime']),
       updateTime: _parseDateTime(json['updateTime'] ?? json['createTime']),
       textColor: Color(
-        int.parse(json['textColor'] ?? Colors.black.value.toString()),
+        int.parse(json['textColor'] ?? Colors.black.toARGB32().toString()),
       ),
       imagePaths: List<String>.from(json['imagePaths'] ?? []),
       isFavorite: json['isFavorite'] ?? false,

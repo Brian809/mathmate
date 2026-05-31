@@ -29,11 +29,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:mathmate/services/video_recommendation_service.dart';
 import 'package:mathmate/theme/app_theme.dart';
 import 'package:mathmate/tutorial_page.dart';
+import 'package:mathmate/pages/geogebra_chat_entry.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
+  if (!kIsWeb) {
+    await dotenv.load(fileName: ".env");
+  }
 
   // 初始化设备ID
   final prefs = await SharedPreferences.getInstance();
@@ -338,24 +341,29 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isWide = screenWidth > 700;
     return Scaffold(
       backgroundColor: cs.surface,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _onRefresh,
-          color: cs.primary,
-          backgroundColor: cs.surface,
-          displacement: 40.0,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _buildSearchBar(),
-                const SizedBox(height: 18),
-                _buildCameraHero(),
-                const SizedBox(height: 14),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: isWide ? 800 : double.infinity),
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: cs.primary,
+              backgroundColor: cs.surface,
+              displacement: 40.0,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(isWide ? 24 : 16, 12, isWide ? 24 : 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _buildSearchBar(),
+                    const SizedBox(height: 18),
+                    _buildCameraHero(),
+                    const SizedBox(height: 14),
                 _buildToolboxCard(),
                 const SizedBox(height: 16),
                 Row(
@@ -382,6 +390,8 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
             ),
           ),
         ),
+      ),
+      ),
       ),
     );
   }
@@ -550,7 +560,7 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
               mainAxisSpacing: 10,
               childAspectRatio: 1.5,
             ),
-            itemCount: 6,
+            itemCount: 7,
             itemBuilder: (BuildContext context, int index) {
               final List<Map<String, dynamic>> tools = <Map<String, dynamic>>[
                 <String, dynamic>{
@@ -617,6 +627,17 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const GeogebraPage(appName: 'probability'),
+                      ),
+                    );
+                  },
+                },
+                <String, dynamic>{
+                  'icon': Icons.auto_awesome,
+                  'name': 'GeoGebra 助手',
+                  'onTap': () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GeogebraChatPage(),
                       ),
                     );
                   },
@@ -766,9 +787,13 @@ class _VideoCardState extends State<_VideoCard> {
   Future<void> _fetchCover() async {
     if (_coverLoaded) return;
     try {
+      // Web 端走 nginx 代理避免 CORS，移动端直连
+      final String apiUrl = kIsWeb
+          ? '/api/bilibili/x/web-interface/view?bvid=${widget.video.bvId}'
+          : 'https://api.bilibili.com/x/web-interface/view?bvid=${widget.video.bvId}';
       final http.Response response = await http.get(
-        Uri.parse('https://api.bilibili.com/x/web-interface/view?bvid=${widget.video.bvId}'),
-        headers: <String, String>{
+        Uri.parse(apiUrl),
+        headers: kIsWeb ? <String, String>{} : <String, String>{
           'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
           'Referer': 'https://www.bilibili.com/',
         },
@@ -778,7 +803,7 @@ class _VideoCardState extends State<_VideoCard> {
         final String? pic = data['data']?['pic'] as String?;
         if (pic != null && mounted) {
           setState(() {
-            _coverUrl = pic;
+            _coverUrl = pic.replaceFirst('http://', 'https://');
             _coverLoaded = true;
           });
         }

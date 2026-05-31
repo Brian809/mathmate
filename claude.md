@@ -20,7 +20,7 @@ flutter test
 # 运行单个测试文件
 flutter test test/widget_test.dart
 
-# 代码生成 (Hive 模型等)
+# 代码生成 (Isar 模型等)
 flutter pub run build_runner build
 
 # 代码生成 + 冲突处理
@@ -78,7 +78,7 @@ MathMate 是一款 Flutter 数学学习助手应用，使用 Material Design (Ma
 | `lib/services/` | AI 服务调用 (OCR、解题、可视化、聊天流、DeepSeek/Vivo 客户端) |
 | `lib/services/prompts/` | 各 AI 服务的 System Prompt 模板 |
 | `lib/models/` | 数据模型 (pipeline_models, pipeline_stage, user_profile) |
-| `lib/data/` | 本地持久化 (Hive 数据库, HistoryRepository, ConversationRepository) |
+| `lib/data/` | 本地持久化 (Isar 数据库, HistoryRepository, ConversationRepository) |
 | `lib/visualization/` | 几何可视化渲染 (验证器、JSON 解析、Canvas 绘制) |
 | `lib/scanner/` | 拍照/裁剪页面 |
 | `lib/pages/` | 子页面 (calculator, chat_home, video_player) |
@@ -89,9 +89,9 @@ MathMate 是一款 Flutter 数学学习助手应用，使用 Material Design (Ma
 
 ### 数据层
 
-- **Hive** (`HistoryRepository`, `ConversationRepository`) - 本地数据库，存储搜题历史、AI 对话记录、用户设置（v2.2.0 从 Isar 迁移）
+- **Isar** (`HistoryRepository`, `ConversationRepository`) - 本地数据库，存储搜题历史、AI 对话记录、用户设置
 - **SharedPreferences** (`ThemeService`) - 主题模式持久化
-- `hive_generator` + `build_runner` - 生成 `.g.dart` 序列化代码
+- `isar_generator` + `build_runner` - 生成 `.g.dart` 序列化代码
 
 ### 服务层约定
 

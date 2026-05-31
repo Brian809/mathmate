@@ -314,7 +314,6 @@ class FlashTextSequence extends StatefulWidget {
 
 class _FlashTextSequenceState extends State<FlashTextSequence> {
   int _currentIndex = 0;
-  bool _isAnimating = false;
 
   @override
   void initState() {
@@ -326,9 +325,7 @@ class _FlashTextSequenceState extends State<FlashTextSequence> {
 
   void _startSequence() {
     if (_currentIndex < widget.texts.length) {
-      setState(() {
-        _isAnimating = true;
-      });
+      // index already set by caller (_onTextComplete)
     } else if (widget.repeat) {
       setState(() {
         _currentIndex = 0;
@@ -344,7 +341,6 @@ class _FlashTextSequenceState extends State<FlashTextSequence> {
       if (mounted) {
         setState(() {
           _currentIndex++;
-          _isAnimating = false;
         });
         _startSequence();
       }

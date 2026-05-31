@@ -34,7 +34,7 @@ class VideoInfo {
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         if (data['code'] == 0 && data['data'] != null) {
-          _coverUrl = data['data']['pic'] as String?;
+          _coverUrl = (data['data']['pic'] as String?)?.replaceFirst('http://', 'https://');
         }
       }
     } catch (e) {

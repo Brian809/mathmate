@@ -490,8 +490,7 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
           double yOffset = 0;
           final startX = strokeBounds.left + 20;
           final startY = strokeBounds.top;
-          // 按行拆分，但保持 \begin{...}...\end{...} 多行块完整
-          for (final line in _splitLinesKeepingBlocks(result)) {
+          for (final line in result.split('\n')) {
             final trimmed = line.trim();
             if (trimmed.isEmpty) continue;
             blocks.add(RecognizedBlock(
@@ -516,51 +515,6 @@ class _NoteHandwritingEditorPageState extends State<NoteHandwritingEditorPage>
     } finally {
       if (mounted) setState(() => _isRecognizing = false);
     }
-  }
-
-  /// 按行拆分，但检测 \begin{...}...\end{...} 块保持完整不拆分
-  List<String> _splitLinesKeepingBlocks(String text) {
-    final List<String> result = [];
-    final List<String> lines = text.split('\n');
-    String? blockType;
-    final StringBuffer blockBuf = StringBuffer();
-
-    for (final String line in lines) {
-      final String trimmed = line.trim();
-      // 检测 \begin{xxx} 块起始
-      final beginMatch = RegExp(r'\\begin\{(\w+)\}').firstMatch(trimmed);
-      if (beginMatch != null) {
-        // 如果之前在收集块（嵌套 \begin 不太常见但安全处理）
-        if (blockType != null) {
-          blockBuf.writeln(line);
-        } else {
-          blockType = beginMatch.group(1);
-          blockBuf.clear();
-          blockBuf.writeln(line);
-        }
-        continue;
-      }
-      // 检测 \end{xxx} 块结束
-      if (blockType != null) {
-        final endMatch = RegExp(r'\\end\{' + blockType + r'\}').firstMatch(trimmed);
-        if (endMatch != null) {
-          blockBuf.writeln(line);
-          result.add(blockBuf.toString().trimRight());
-          blockType = null;
-          continue;
-        }
-        // 块中间的行，累积
-        blockBuf.writeln(line);
-        continue;
-      }
-      // 普通行
-      result.add(line);
-    }
-    // 未闭合的块（异常情况），直接输出
-    if (blockType != null) {
-      result.add(blockBuf.toString().trimRight());
-    }
-    return result;
   }
 
   Future<void> _analyzeFormula(String formula) async {
@@ -1639,8 +1593,8 @@ ${widget.visualization}
     final List<InlineSpan> spans = [];
     int i = 0;
     while (i < line.length) {
-      // 匹配 $...$ 内联公式，跳过 \$ 转义符
-      if (line[i] == r'$' && (i == 0 || line[i - 1] != r'\')) {
+      // 匹配 $...$ 内联公式
+      if (line[i] == r'$') {
         final end = line.indexOf(r'$', i + 1);
         if (end != -1) {
           final formula = line.substring(i + 1, end);

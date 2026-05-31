@@ -12,8 +12,8 @@ import 'package:mathmate/models/pipeline_stage.dart';
 import 'package:mathmate/services/app_logger.dart';
 import 'package:mathmate/services/math_pipeline_service.dart';
 import 'package:mathmate/visualization/geometry_validator.dart';
+import 'package:mathmate/visualization/geometry_painter.dart';
 import 'package:mathmate/visualization/safe_json_parser.dart';
-import 'package:mathmate/visualization/scene_renderer.dart';
 import 'package:mathmate/visualization_page.dart';
 import 'package:mathmate/services/katex_pdf_service.dart';
 
@@ -1046,7 +1046,18 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
                           const SizedBox(height: 20),
                         ],
                         if (_geometryScene != null) ...[
-                          SceneRenderer(scene: _geometryScene!),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              height: 300,
+                              child: CustomPaint(
+                                size: Size.infinite,
+                                painter: GeometryPainter(
+                                  scene: SafeJsonParser.parseSceneFromMap(_geometryScene!),
+                                ),
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           SizedBox(
                             width: double.infinity,
