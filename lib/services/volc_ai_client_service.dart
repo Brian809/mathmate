@@ -1,12 +1,20 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mathmate/services/app_logger.dart';
 import 'package:mathmate/services/provider_config_service.dart';
 
 class VolcAiClientService {
   static bool _dotenvLoaded = false;
+
+  http.Client _createClient() {
+    final HttpClient client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    return IOClient(client);
+  }
 
   Future<void> _ensureEnvLoaded() async {
     if (_dotenvLoaded) {
@@ -149,8 +157,9 @@ class VolcAiClientService {
       'messages': messages,
     });
     AppLogger.instance.info('[Volc] POST $baseUrl, body: ${body.length} 字节');
+    final http.Client client = _createClient();
     final Stopwatch sw = Stopwatch()..start();
-    return http.post(Uri.parse(baseUrl), headers: headers, body: body)
+    return client.post(Uri.parse(baseUrl), headers: headers, body: body)
         .then((http.Response r) {
           sw.stop();
           AppLogger.instance.info('[Volc] HTTP ${r.statusCode}, 耗时: ${sw.elapsedMilliseconds}ms');
@@ -166,7 +175,8 @@ class VolcAiClientService {
           final String msg = 'Volc API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
           AppLogger.instance.error('[Volc] $msg');
           throw Exception(msg);
-        });
+        })
+        .whenComplete(() => client.close());
   }
 
   Future<http.Response> _postInput(
@@ -180,8 +190,9 @@ class VolcAiClientService {
       'input': <String, dynamic>{'messages': messages},
     });
     AppLogger.instance.info('[Volc] POST(input) $baseUrl, body: ${body.length} 字节');
+    final http.Client client = _createClient();
     final Stopwatch sw = Stopwatch()..start();
-    return http.post(Uri.parse(baseUrl), headers: headers, body: body)
+    return client.post(Uri.parse(baseUrl), headers: headers, body: body)
         .then((http.Response r) {
           sw.stop();
           AppLogger.instance.info('[Volc] HTTP ${r.statusCode}, 耗时: ${sw.elapsedMilliseconds}ms');
@@ -197,7 +208,8 @@ class VolcAiClientService {
           final String msg = 'Volc API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
           AppLogger.instance.error('[Volc] $msg');
           throw Exception(msg);
-        });
+        })
+        .whenComplete(() => client.close());
   }
 
   List<Map<String, dynamic>> _toInputFormat(List<Map<String, dynamic>> messages) {
