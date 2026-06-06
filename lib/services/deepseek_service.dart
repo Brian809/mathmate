@@ -50,16 +50,25 @@ class DeepSeekService {
       <String, String>{'role': 'user', 'content': userText},
     ];
 
+    final String body = jsonEncode(<String, dynamic>{
+      'model': modelId,
+      'messages': messages,
+    });
+    AppLogger.instance.info('[DeepSeek] POST $baseUrl, body: ${body.length} 字节');
     final Stopwatch sw = Stopwatch()..start();
     final http.Response response = await http.post(
       Uri.parse(baseUrl),
       headers: headers,
-      body: jsonEncode(<String, dynamic>{
-        'model': modelId,
-        'messages': messages,
-      }),
-    ).timeout(const Duration(seconds: 60), onTimeout: () {
-      throw Exception('DeepSeek API 请求超时（60秒）');
+      body: body,
+    ).catchError((Object e, StackTrace st) {
+      sw.stop();
+      AppLogger.instance.error('[DeepSeek] 网络异常 (${sw.elapsedMilliseconds}ms): ${e.runtimeType} - $e');
+      throw e;
+    }).timeout(const Duration(seconds: 60), onTimeout: () {
+      sw.stop();
+      final String msg = 'DeepSeek API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
+      AppLogger.instance.error('[DeepSeek] $msg');
+      throw Exception(msg);
     });
     sw.stop();
     AppLogger.instance.info('[DeepSeek] 响应状态: ${response.statusCode}，耗时 ${sw.elapsedMilliseconds}ms');
