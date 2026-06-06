@@ -265,11 +265,10 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
     );
 
     // 保存到文件再返回，避免 Navigator pop 丢失 in-memory bytes
-    final bytes = Uint8List.fromList(img.encodeJpg(croppedImage));
+    final croppedBytes = Uint8List.fromList(img.encodeJpg(croppedImage));
     final outPath = widget.imageFile.path.replaceAll('.jpg', '_cropped.jpg');
-    final f = File(outPath);
-    f.writeAsBytesSync(bytes);
-    final croppedFile = XFile(outPath, bytes: bytes);
+    File(outPath).writeAsBytesSync(croppedBytes);
+    final croppedFile = XFile(outPath, bytes: croppedBytes);
 
     if (mounted) Navigator.pop(context, croppedFile);
   }
