@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:http/http.dart' as http;
@@ -303,13 +303,13 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
       _isScanning = true;
     });
 
-    final File? scannedFile = await _scannerService.startScanning(context);
+    final dynamic scannedResult = await _scannerService.startScanning(context);
 
     if (!mounted) {
       return;
     }
 
-    if (scannedFile == null) {
+    if (scannedResult == null) {
       setState(() {
         _isScanning = false;
       });
@@ -320,9 +320,9 @@ class _QuestionHomePageState extends State<QuestionHomePage> {
       _isScanning = false;
     });
 
-    final File? croppedFile = await Navigator.of(context).push<File>(
+    final XFile? croppedFile = await Navigator.of(context).push<XFile>(
       MaterialPageRoute(
-        builder: (_) => EnhancedCropPage(imageFile: scannedFile),
+        builder: (_) => EnhancedCropPage(imageFile: scannedResult as XFile),
       ),
     );
 

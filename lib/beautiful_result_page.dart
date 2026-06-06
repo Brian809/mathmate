@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -18,7 +16,7 @@ import 'package:mathmate/visualization_page.dart';
 import 'package:mathmate/services/katex_pdf_service.dart';
 
 class BeautifulResultPage extends StatefulWidget {
-  final File image;
+  final XFile image;
   final MathHistory? history;
   final String? heroTag;
 
@@ -65,15 +63,6 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
   Future<void> _loadImageBytes() async {
     try {
       AppLogger.instance.info('[ResultPage] 尝试加载图片: ${widget.image.path}');
-      if (!await widget.image.exists()) {
-        AppLogger.instance.error('[ResultPage] 图片文件不存在: ${widget.image.path}');
-        if (mounted) {
-          setState(() {
-            _stageErrors.add('图片文件不存在: ${widget.image.path}');
-          });
-        }
-        return;
-      }
       _imageBytes = await widget.image.readAsBytes();
       AppLogger.instance.info('[ResultPage] 图片加载成功: ${_imageBytes!.length} 字节');
       if (!mounted) return;
@@ -100,7 +89,7 @@ class _BeautifulResultPageState extends State<BeautifulResultPage> {
       AppLogger.instance.info('[ResultPage] ========== 开始 Pipeline ==========');
       AppLogger.instance.info('[ResultPage] 图片路径: ${widget.image.path}');
       final PipelineResult result = await _pipelineService.runFromImage(
-        XFile(widget.image.path),
+        widget.image,
         onStageChanged: (PipelineStage stage) {
           if (!mounted) return;
           setState(() {

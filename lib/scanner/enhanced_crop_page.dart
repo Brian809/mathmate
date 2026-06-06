@@ -1,10 +1,11 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
 
 class EnhancedCropPage extends StatefulWidget {
-  final File imageFile;
+  final XFile imageFile;
 
   const EnhancedCropPage({super.key, required this.imageFile});
 
@@ -25,6 +26,16 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
   double _lastTouchDy = 0;
 
   static const double _edgeThreshold = 0.04;
+
+  Uint8List? _imageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.imageFile.readAsBytes().then((b) {
+      if (mounted) setState(() => _imageBytes = b);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +157,9 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
               children: [
                 // 1. 展示拍摄的原图
                 Center(
-                  child: Image.file(widget.imageFile, fit: BoxFit.contain),
+                  child: _imageBytes != null
+                      ? Image.memory(_imageBytes!, fit: BoxFit.contain)
+                      : const Center(child: CircularProgressIndicator()),
                 ),
                 // 2. 绘制矩形遮罩层
                 Positioned.fill(
@@ -251,9 +264,10 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
     );
 
     // 保存并返回
-    final croppedFile = File(
+    final croppedFile = XFile(
       widget.imageFile.path.replaceAll('.jpg', '_cropped.jpg'),
-    )..writeAsBytesSync(img.encodeJpg(croppedImage));
+      bytes: img.encodeJpg(croppedImage),
+    );
 
     if (mounted) Navigator.pop(context, croppedFile);
   }

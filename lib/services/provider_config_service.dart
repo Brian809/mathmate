@@ -265,11 +265,11 @@ class ProviderConfigService extends ChangeNotifier {
       'glm-5',
     ];
     try {
-      // 去除最后一个路径段 (如 /chat/completions)，再拼 /models
-      final String baseDir = baseUrl.contains('/')
-          ? baseUrl.substring(0, baseUrl.lastIndexOf('/'))
-          : baseUrl;
-      final Uri modelsUri = Uri.parse('$baseDir/models');
+      // 去除 /chat/completions 或 /completions 后缀，再拼 /models
+      final String clean = baseUrl
+          .replaceAll(RegExp(r'/chat/completions/?$'), '')
+          .replaceAll(RegExp(r'/completions/?$'), '');
+      final Uri modelsUri = Uri.parse('$clean/models');
       final bool isAnthropic = baseUrl.contains('anthropic.com');
 
       final Map<String, String> headers = <String, String>{

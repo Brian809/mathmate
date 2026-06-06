@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,7 +13,7 @@ class ScannerService {
           source: ImageSource.gallery,
           imageQuality: 90,
         );
-        if (photo != null) return photo.path;
+        if (photo != null) return photo;
       } catch (e) {
         debugPrint('ScannerService web pickImage error: $e');
       }
@@ -65,8 +63,8 @@ class ScannerService {
 
     if (!context.mounted) return null;
 
-    // native 返回 File 对象（main.dart 期望 File?）
-    return File(photo.path);
+    // 直接返回 XFile，跨平台兼容
+    return photo;
   }
 
   Future<ImageSource?> _showSourcePicker(BuildContext context) async {
