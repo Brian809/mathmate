@@ -24,6 +24,7 @@ import 'package:mathmate/pages/video_player_page.dart';
 import 'package:mathmate/profile_page.dart';
 import 'package:mathmate/scanner/enhanced_crop_page.dart';
 import 'package:mathmate/services/scanner_service.dart';
+import 'package:mathmate/services/provider_config_service.dart';
 import 'package:mathmate/services/theme_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mathmate/services/video_recommendation_service.dart';
@@ -60,6 +61,7 @@ Future<void> main() async {
     await ConversationRepository.instance.init();
   }
   await ThemeService.instance.init();
+  await ProviderConfigService.instance.init();
 
   final bool isFirst = kIsWeb ? true : await HistoryRepository.instance.isFirstLaunch();
   final bool tutorialCompleted = kIsWeb ? false : await HistoryRepository.instance.isTutorialCompleted();

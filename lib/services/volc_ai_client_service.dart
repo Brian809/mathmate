@@ -1,25 +1,17 @@
 import 'dart:convert';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:mathmate/services/app_logger.dart';
+import 'package:mathmate/services/provider_config_service.dart';
 
 class VolcAiClientService {
-  static const String _apiKeyEnv = 'VOLC_API_KEY';
-  static const String _baseUrlEnv = 'VOLC_BASE_URL';
-  static const String _defaultModelEnv = 'VOLC_MODEL_ID';
-  static const String _requestFormatEnv = 'VOLC_REQUEST_FORMAT';
-  static const String _defaultBaseUrl =
-      'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
-
   static bool _dotenvLoaded = false;
 
   Future<void> _ensureEnvLoaded() async {
     if (_dotenvLoaded) {
       return;
     }
-    await dotenv.load(fileName: '.env');
     _dotenvLoaded = true;
   }
 
@@ -73,12 +65,11 @@ class VolcAiClientService {
   }) async {
     await _ensureEnvLoaded();
 
-    final String apiKey = (dotenv.env[_apiKeyEnv] ?? '').trim();
-    final String modelId =
-        (dotenv.env[modelEnv] ?? dotenv.env[_defaultModelEnv] ?? '').trim();
-    final String baseUrl = (dotenv.env[_baseUrlEnv] ?? _defaultBaseUrl).trim();
-    final String requestFormat =
-        (dotenv.env[_requestFormatEnv] ?? 'auto').trim().toLowerCase();
+    final pc = ProviderConfigService.instance;
+    final String apiKey = pc.visionApiKey;
+    final String modelId = modelEnv == 'VOLC_OCR_MODEL_ID' ? pc.volcOcrModelId : pc.visionModelId;
+    final String baseUrl = pc.visionBaseUrl;
+    final String requestFormat = 'auto'; // 默认 auto，不再从 env 读取
 
     AppLogger.instance.info('[Volc] 模型 env: $modelEnv，实际 modelId: $modelId');
     AppLogger.instance.info('[Volc] 端点: $baseUrl');
@@ -88,7 +79,7 @@ class VolcAiClientService {
       throw Exception('Missing env config: VOLC_API_KEY');
     }
     if (modelId.isEmpty) {
-      throw Exception('Missing env config: $modelEnv or $_defaultModelEnv');
+      throw Exception('Missing model config: $modelEnv');
     }
 
     final Map<String, String> headers = <String, String>{

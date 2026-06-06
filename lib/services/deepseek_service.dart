@@ -1,20 +1,14 @@
 import 'dart:convert';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:mathmate/services/app_logger.dart';
+import 'package:mathmate/services/provider_config_service.dart';
 
 class DeepSeekService {
-  static const String _apiKeyEnv = 'DEEPSEEK_API_KEY';
-  static const String _modelIdEnv = 'DEEPSEEK_MODEL_ID';
-  static const String _baseUrlEnv = 'DEEPSEEK_BASE_URL';
-  static const String _defaultBaseUrl = 'https://api.deepseek.com/chat/completions';
-
   static bool _dotenvLoaded = false;
 
   Future<void> _ensureEnvLoaded() async {
     if (_dotenvLoaded) return;
-    await dotenv.load(fileName: '.env');
     _dotenvLoaded = true;
   }
 
@@ -24,9 +18,10 @@ class DeepSeekService {
   }) async {
     await _ensureEnvLoaded();
 
-    final String apiKey = (dotenv.env[_apiKeyEnv] ?? '').trim();
-    final String modelId = (dotenv.env[_modelIdEnv] ?? '').trim();
-    final String baseUrl = (dotenv.env[_baseUrlEnv] ?? _defaultBaseUrl).trim();
+    final pc = ProviderConfigService.instance;
+    final String apiKey = pc.reasoningApiKey;
+    final String modelId = pc.reasoningModelId;
+    final String baseUrl = pc.reasoningBaseUrl;
 
     AppLogger.instance.info('[DeepSeek] 请求模型: $modelId');
     AppLogger.instance.info('[DeepSeek] 请求端点: $baseUrl');

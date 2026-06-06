@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:mathmate/services/provider_config_service.dart';
 import 'package:mathmate/services/vivo_chat_service.dart';
 
 class StreamChunk {
@@ -16,34 +16,19 @@ class StreamChunk {
 }
 
 class ChatStreamService {
-  static const String _apiKeyEnv = 'VIVO_API_KEY';
-  static const String _modelEnv = 'VIVO_MODEL_ID';
-  static const String _baseUrlEnv = 'VIVO_BASE_URL';
-  static const String _defaultModel = 'qwen-plus';
-  static const String _defaultBaseUrl =
-      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-
-  static bool _dotenvLoaded = false;
   http.Client? _client;
   bool _cancelled = false;
-
-  Future<void> _ensureEnvLoaded() async {
-    if (_dotenvLoaded) return;
-    await dotenv.load(fileName: '.env');
-    _dotenvLoaded = true;
-  }
 
   Stream<StreamChunk> sendMessageStream({
     required List<VivoChatMessage> messages,
     String? modelId,
   }) async* {
-    await _ensureEnvLoaded();
     _cancelled = false;
 
-    final String apiKey = (dotenv.env[_apiKeyEnv] ?? '').trim();
-    final String model = (modelId ?? dotenv.env[_modelEnv] ?? _defaultModel).trim();
-    final String baseUrl =
-        (dotenv.env[_baseUrlEnv] ?? _defaultBaseUrl).trim();
+    final pc = ProviderConfigService.instance;
+    final String apiKey = pc.chatApiKey;
+    final String model = modelId ?? pc.chatModelId;
+    final String baseUrl = pc.chatBaseUrl;
 
     if (apiKey.isEmpty) {
       yield StreamChunk(error: 'Missing env config: VIVO_API_KEY');
