@@ -1,3 +1,4 @@
+import 'dart:io' show File;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -263,11 +264,12 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
       height: height,
     );
 
-    // 保存并返回
-    final croppedFile = XFile(
-      widget.imageFile.path.replaceAll('.jpg', '_cropped.jpg'),
-      bytes: img.encodeJpg(croppedImage),
-    );
+    // 保存到文件再返回，避免 Navigator pop 丢失 in-memory bytes
+    final bytes = Uint8List.fromList(img.encodeJpg(croppedImage));
+    final outPath = widget.imageFile.path.replaceAll('.jpg', '_cropped.jpg');
+    final f = File(outPath);
+    f.writeAsBytesSync(bytes);
+    final croppedFile = XFile(outPath, bytes: bytes);
 
     if (mounted) Navigator.pop(context, croppedFile);
   }
