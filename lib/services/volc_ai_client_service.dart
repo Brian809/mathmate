@@ -144,16 +144,29 @@ class VolcAiClientService {
     String modelId,
     List<Map<String, dynamic>> messages,
   ) {
-    return http.post(
-      Uri.parse(baseUrl),
-      headers: headers,
-      body: jsonEncode(<String, dynamic>{
-        'model': modelId,
-        'messages': messages,
-      }),
-    ).timeout(const Duration(seconds: 60), onTimeout: () {
-      throw Exception('Volc API 请求超时（60秒）');
+    final String body = jsonEncode(<String, dynamic>{
+      'model': modelId,
+      'messages': messages,
     });
+    AppLogger.instance.info('[Volc] POST $baseUrl, body: ${body.length} 字节');
+    final Stopwatch sw = Stopwatch()..start();
+    return http.post(Uri.parse(baseUrl), headers: headers, body: body)
+        .then((http.Response r) {
+          sw.stop();
+          AppLogger.instance.info('[Volc] HTTP ${r.statusCode}, 耗时: ${sw.elapsedMilliseconds}ms');
+          return r;
+        })
+        .catchError((Object e, StackTrace st) {
+          sw.stop();
+          AppLogger.instance.error('[Volc] 网络异常 (${sw.elapsedMilliseconds}ms): ${e.runtimeType} - $e');
+          throw e;
+        })
+        .timeout(const Duration(seconds: 60), onTimeout: () {
+          sw.stop();
+          final String msg = 'Volc API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
+          AppLogger.instance.error('[Volc] $msg');
+          throw Exception(msg);
+        });
   }
 
   Future<http.Response> _postInput(
@@ -162,16 +175,29 @@ class VolcAiClientService {
     String modelId,
     List<Map<String, dynamic>> messages,
   ) {
-    return http.post(
-      Uri.parse(baseUrl),
-      headers: headers,
-      body: jsonEncode(<String, dynamic>{
-        'model': modelId,
-        'input': _toInputFormat(messages),
-      }),
-    ).timeout(const Duration(seconds: 60), onTimeout: () {
-      throw Exception('Volc API 请求超时（60秒）');
+    final String body = jsonEncode(<String, dynamic>{
+      'model': modelId,
+      'input': <String, dynamic>{'messages': messages},
     });
+    AppLogger.instance.info('[Volc] POST(input) $baseUrl, body: ${body.length} 字节');
+    final Stopwatch sw = Stopwatch()..start();
+    return http.post(Uri.parse(baseUrl), headers: headers, body: body)
+        .then((http.Response r) {
+          sw.stop();
+          AppLogger.instance.info('[Volc] HTTP ${r.statusCode}, 耗时: ${sw.elapsedMilliseconds}ms');
+          return r;
+        })
+        .catchError((Object e, StackTrace st) {
+          sw.stop();
+          AppLogger.instance.error('[Volc] 网络异常 (${sw.elapsedMilliseconds}ms): ${e.runtimeType} - $e');
+          throw e;
+        })
+        .timeout(const Duration(seconds: 60), onTimeout: () {
+          sw.stop();
+          final String msg = 'Volc API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
+          AppLogger.instance.error('[Volc] $msg');
+          throw Exception(msg);
+        });
   }
 
   List<Map<String, dynamic>> _toInputFormat(List<Map<String, dynamic>> messages) {
