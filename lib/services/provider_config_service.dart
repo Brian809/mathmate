@@ -117,7 +117,7 @@ class ProviderConfigService extends ChangeNotifier {
     final String spApiKey = prefs.getString('pc_${prefix}_api_key') ?? '';
     final String apiKey = spApiKey.isNotEmpty
         ? spApiKey
-        : (dotenv.env[envKeys[0]] ?? '').trim();
+        : (dotenv.isInitialized ? (dotenv.env[envKeys[0]] ?? '') : '').trim();
 
     // modelId: SP → .env → 硬编码兜底
     final String spModelId = prefs.getString('pc_${prefix}_model_id') ?? '';
@@ -136,7 +136,7 @@ class ProviderConfigService extends ChangeNotifier {
   }
 
   String _resolveDefaultModel(ProviderSlot slot, String envKey) {
-    final String envValue = (dotenv.env[envKey] ?? '').trim();
+    final String envValue = (dotenv.isInitialized ? (dotenv.env[envKey] ?? '') : '').trim();
     if (envValue.isNotEmpty) return envValue;
     // 硬编码兜底
     switch (slot) {
@@ -157,7 +157,7 @@ class ProviderConfigService extends ChangeNotifier {
       }
     }
     // 再查 .env
-    final String envValue = (dotenv.env[envKey] ?? '').trim();
+    final String envValue = (dotenv.isInitialized ? (dotenv.env[envKey] ?? '') : '').trim();
     if (envValue.isNotEmpty) return envValue;
     // 硬编码兜底
     return '';
