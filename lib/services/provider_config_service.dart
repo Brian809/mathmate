@@ -54,18 +54,21 @@ class ProviderConfigService extends ChangeNotifier {
   String _visionApiKey = '';
   String _visionModelId = '';
   String _visionBaseUrl = '';
+  double _visionTemperature = 1.0;
 
   // reasoning slot
   String _reasoningProviderId = 'deepseek';
   String _reasoningApiKey = '';
   String _reasoningModelId = '';
   String _reasoningBaseUrl = '';
+  double _reasoningTemperature = 1.0;
 
   // chat slot
   String _chatProviderId = 'qwen';
   String _chatApiKey = '';
   String _chatModelId = '';
   String _chatBaseUrl = '';
+  double _chatTemperature = 0.7;
 
   // ---- Getter ----
 
@@ -75,6 +78,7 @@ class ProviderConfigService extends ChangeNotifier {
   String get visionModelId => _visionModelId;
   String get volcOcrModelId => _visionModelId; // OCR 共用 vision 模型
   String get visionBaseUrl => _visionBaseUrl;
+  double get visionTemperature => _visionTemperature;
   bool get isVisionConfigured => _visionApiKey.isNotEmpty;
 
   // reasoning
@@ -82,6 +86,7 @@ class ProviderConfigService extends ChangeNotifier {
   String get reasoningApiKey => _reasoningApiKey;
   String get reasoningModelId => _reasoningModelId;
   String get reasoningBaseUrl => _reasoningBaseUrl;
+  double get reasoningTemperature => _reasoningTemperature;
   bool get isReasoningConfigured => _reasoningApiKey.isNotEmpty;
 
   // chat
@@ -89,6 +94,7 @@ class ProviderConfigService extends ChangeNotifier {
   String get chatApiKey => _chatApiKey;
   String get chatModelId => _chatModelId;
   String get chatBaseUrl => _chatBaseUrl;
+  double get chatTemperature => _chatTemperature;
   bool get isChatConfigured => _chatApiKey.isNotEmpty;
 
   // ---- 初始化 ----
@@ -131,8 +137,25 @@ class ProviderConfigService extends ChangeNotifier {
         ? spBaseUrl
         : _resolveBaseUrl(providerId, envKeys[2]);
 
+    // temperature: SP → 默认值（K2=1.0, v1=0.6, 其他=0.7）
+    final double spTemp = prefs.getDouble('pc_${prefix}_temperature') ?? -1;
+    final double temperature = spTemp >= 0
+        ? spTemp
+        : _defaultTemperature(slot);
+
     // 赋值
-    _setSlotFields(slot, providerId, apiKey, modelId, baseUrl);
+    _setSlotFields(slot, providerId, apiKey, modelId, baseUrl, temperature);
+  }
+
+  double _defaultTemperature(ProviderSlot slot) {
+    switch (slot) {
+      case ProviderSlot.vision:
+        return 1.0;
+      case ProviderSlot.reasoning:
+        return 1.0;
+      case ProviderSlot.chat:
+        return 0.7;
+    }
   }
 
   String _resolveDefaultModel(ProviderSlot slot, String envKey) {
@@ -163,23 +186,26 @@ class ProviderConfigService extends ChangeNotifier {
     return '';
   }
 
-  void _setSlotFields(ProviderSlot slot, String providerId, String apiKey, String modelId, String baseUrl) {
+  void _setSlotFields(ProviderSlot slot, String providerId, String apiKey, String modelId, String baseUrl, double temperature) {
     switch (slot) {
       case ProviderSlot.vision:
         _visionProviderId = providerId;
         _visionApiKey = apiKey;
         _visionModelId = modelId;
         _visionBaseUrl = baseUrl;
+        _visionTemperature = temperature;
       case ProviderSlot.reasoning:
         _reasoningProviderId = providerId;
         _reasoningApiKey = apiKey;
         _reasoningModelId = modelId;
         _reasoningBaseUrl = baseUrl;
+        _reasoningTemperature = temperature;
       case ProviderSlot.chat:
         _chatProviderId = providerId;
         _chatApiKey = apiKey;
         _chatModelId = modelId;
         _chatBaseUrl = baseUrl;
+        _chatTemperature = temperature;
     }
   }
 
@@ -189,16 +215,19 @@ class ProviderConfigService extends ChangeNotifier {
   Future<void> setVisionApiKey(String value) async => _setSlotValue(ProviderSlot.vision, 'api_key', value, () => _visionApiKey = value);
   Future<void> setVisionModelId(String value) async => _setSlotValue(ProviderSlot.vision, 'model_id', value, () => _visionModelId = value);
   Future<void> setVisionBaseUrl(String value) async => _setSlotValue(ProviderSlot.vision, 'base_url', value, () => _visionBaseUrl = value);
+  Future<void> setVisionTemperature(double value) async => _setSlotDouble(ProviderSlot.vision, 'temperature', value, () => _visionTemperature = value);
 
   Future<void> setReasoningProviderId(String value) async => _setSlotValue(ProviderSlot.reasoning, 'provider_id', value, () => _reasoningProviderId = value);
   Future<void> setReasoningApiKey(String value) async => _setSlotValue(ProviderSlot.reasoning, 'api_key', value, () => _reasoningApiKey = value);
   Future<void> setReasoningModelId(String value) async => _setSlotValue(ProviderSlot.reasoning, 'model_id', value, () => _reasoningModelId = value);
   Future<void> setReasoningBaseUrl(String value) async => _setSlotValue(ProviderSlot.reasoning, 'base_url', value, () => _reasoningBaseUrl = value);
+  Future<void> setReasoningTemperature(double value) async => _setSlotDouble(ProviderSlot.reasoning, 'temperature', value, () => _reasoningTemperature = value);
 
   Future<void> setChatProviderId(String value) async => _setSlotValue(ProviderSlot.chat, 'provider_id', value, () => _chatProviderId = value);
   Future<void> setChatApiKey(String value) async => _setSlotValue(ProviderSlot.chat, 'api_key', value, () => _chatApiKey = value);
   Future<void> setChatModelId(String value) async => _setSlotValue(ProviderSlot.chat, 'model_id', value, () => _chatModelId = value);
   Future<void> setChatBaseUrl(String value) async => _setSlotValue(ProviderSlot.chat, 'base_url', value, () => _chatBaseUrl = value);
+  Future<void> setChatTemperature(double value) async => _setSlotDouble(ProviderSlot.chat, 'temperature', value, () => _chatTemperature = value);
 
   Future<void> _setSlotValue(ProviderSlot slot, String key, String value, VoidCallback assign) async {
     final String trimmed = value.trim();
@@ -209,6 +238,13 @@ class ProviderConfigService extends ChangeNotifier {
     } else {
       await prefs.setString('pc_${slot.name}_$key', trimmed);
     }
+    notifyListeners();
+  }
+
+  Future<void> _setSlotDouble(ProviderSlot slot, String key, double value, VoidCallback assign) async {
+    assign();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('pc_${slot.name}_$key', value);
     notifyListeners();
   }
 
@@ -225,6 +261,7 @@ class ProviderConfigService extends ChangeNotifier {
     await prefs.remove('${prefix}_api_key');
     await prefs.remove('${prefix}_model_id');
     await prefs.remove('${prefix}_base_url');
+    await prefs.remove('${prefix}_temperature');
     _loadSlot(prefs, slot);
     notifyListeners();
   }

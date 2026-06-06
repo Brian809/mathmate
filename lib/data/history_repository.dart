@@ -72,7 +72,7 @@ class HistoryRepository {
       entity.geometryScene = GeometrySceneEmbedded.fromMap(sceneMap, null);
     }
 
-    entity.id = DateTime.now().millisecondsSinceEpoch;
+    entity.id = DateTime.now().millisecondsSinceEpoch & 0xFFFFFFFF;
     await _box!.put(entity.id, entity);
   }
 

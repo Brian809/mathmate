@@ -35,6 +35,8 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
     super.initState();
     widget.imageFile.readAsBytes().then((b) {
       if (mounted) setState(() => _imageBytes = b);
+    }).catchError((_) {
+      if (mounted) setState(() => _imageBytes = Uint8List(0));
     });
   }
 
@@ -245,6 +247,7 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
 
   // 利用 image 库进行像素级裁剪
   Future<void> _processCrop() async {
+    try {
     final bytes = await widget.imageFile.readAsBytes();
     final decodedImage = img.decodeImage(bytes);
     if (decodedImage == null) return;
@@ -266,11 +269,20 @@ class _EnhancedCropPageState extends State<EnhancedCropPage> {
 
     // 保存到文件再返回，避免 Navigator pop 丢失 in-memory bytes
     final croppedBytes = Uint8List.fromList(img.encodeJpg(croppedImage));
-    final outPath = widget.imageFile.path.replaceAll('.jpg', '_cropped.jpg');
+    final String srcPath = widget.imageFile.path;
+    final String outPath = '${srcPath.substring(0, srcPath.lastIndexOf('.'))}_cropped.jpg';
     File(outPath).writeAsBytesSync(croppedBytes);
     final croppedFile = XFile(outPath, bytes: croppedBytes);
 
     if (mounted) Navigator.pop(context, croppedFile);
+    } catch (e) {
+      debugPrint('_processCrop error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('裁剪失败: $e')),
+        );
+      }
+    }
   }
 }
 

@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:mathmate/services/app_logger.dart';
 import 'package:mathmate/services/provider_config_service.dart';
@@ -28,10 +30,18 @@ class VolcAiClientService {
     required String prompt,
     required String modelEnv,
   }) async {
-    final List<int> bytes = await imageFile.readAsBytes();
+    List<int> bytes = await imageFile.readAsBytes();
+    AppLogger.instance.info('[VolcVision] 原始图片: ${bytes.length} 字节 (${(bytes.length / 1024).toStringAsFixed(1)} KB)');
+
+    // 压缩：max 1024px, JPEG quality 75
+    final img.Image? decoded = img.decodeImage(Uint8List.fromList(bytes));
+    if (decoded != null && (decoded.width > 1024 || decoded.height > 1024)) {
+      final img.Image resized = img.copyResize(decoded, width: 1024, height: 1024);
+      bytes = img.encodeJpg(resized, quality: 75);
+      AppLogger.instance.info('[VolcVision] 压缩后: ${bytes.length} 字节 (${(bytes.length / 1024).toStringAsFixed(1)} KB)');
+    }
+
     final String base64Image = base64Encode(bytes);
-    AppLogger.instance.info('[VolcVision] 图片大小: ${bytes.length} 字节 (${(bytes.length / 1024).toStringAsFixed(1)} KB)');
-    AppLogger.instance.info('[VolcVision] base64 长度: ${base64Image.length} 字符');
     AppLogger.instance.info('[VolcVision] system prompt 长度: ${prompt.length} 字符');
 
     return _request(
@@ -170,9 +180,9 @@ class VolcAiClientService {
           AppLogger.instance.error('[Volc] 网络异常 (${sw.elapsedMilliseconds}ms): ${e.runtimeType} - $e');
           throw e;
         })
-        .timeout(const Duration(seconds: 60), onTimeout: () {
+        .timeout(const Duration(seconds: 120), onTimeout: () {
           sw.stop();
-          final String msg = 'Volc API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
+          final String msg = 'Volc API 请求超时（120秒），已等待 ${sw.elapsedMilliseconds}ms';
           AppLogger.instance.error('[Volc] $msg');
           throw Exception(msg);
         })
@@ -203,9 +213,9 @@ class VolcAiClientService {
           AppLogger.instance.error('[Volc] 网络异常 (${sw.elapsedMilliseconds}ms): ${e.runtimeType} - $e');
           throw e;
         })
-        .timeout(const Duration(seconds: 60), onTimeout: () {
+        .timeout(const Duration(seconds: 120), onTimeout: () {
           sw.stop();
-          final String msg = 'Volc API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
+          final String msg = 'Volc API 请求超时（120秒），已等待 ${sw.elapsedMilliseconds}ms';
           AppLogger.instance.error('[Volc] $msg');
           throw Exception(msg);
         })

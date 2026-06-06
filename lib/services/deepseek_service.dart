@@ -73,9 +73,9 @@ class DeepSeekService {
       sw.stop();
       AppLogger.instance.error('[DeepSeek] 网络异常 (${sw.elapsedMilliseconds}ms): ${e.runtimeType} - $e');
       throw e;
-    }).timeout(const Duration(seconds: 60), onTimeout: () {
+    }).timeout(const Duration(seconds: 120), onTimeout: () {
       sw.stop();
-      final String msg = 'DeepSeek API 请求超时（60秒），已等待 ${sw.elapsedMilliseconds}ms';
+      final String msg = 'DeepSeek API 请求超时（120秒），已等待 ${sw.elapsedMilliseconds}ms';
       AppLogger.instance.error('[DeepSeek] $msg');
       throw Exception(msg);
     }).whenComplete(() => client.close());

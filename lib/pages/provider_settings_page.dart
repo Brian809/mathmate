@@ -26,6 +26,11 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
   late TextEditingController _chatModelIdCtrl;
   late TextEditingController _chatBaseUrlCtrl;
 
+  // temperature controllers
+  late TextEditingController _visionTempCtrl;
+  late TextEditingController _reasoningTempCtrl;
+  late TextEditingController _chatTempCtrl;
+
   // password visibility
   bool _visionKeyVisible = false;
   bool _reasoningKeyVisible = false;
@@ -47,6 +52,9 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     _chatApiKeyCtrl = TextEditingController(text: _config.chatApiKey);
     _chatModelIdCtrl = TextEditingController(text: _config.chatModelId);
     _chatBaseUrlCtrl = TextEditingController(text: _config.chatBaseUrl);
+    _visionTempCtrl = TextEditingController(text: _config.visionTemperature.toString());
+    _reasoningTempCtrl = TextEditingController(text: _config.reasoningTemperature.toString());
+    _chatTempCtrl = TextEditingController(text: _config.chatTemperature.toString());
     _config.addListener(_onConfigChanged);
   }
 
@@ -106,6 +114,9 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     _chatApiKeyCtrl.dispose();
     _chatModelIdCtrl.dispose();
     _chatBaseUrlCtrl.dispose();
+    _visionTempCtrl.dispose();
+    _reasoningTempCtrl.dispose();
+    _chatTempCtrl.dispose();
     super.dispose();
   }
 
@@ -121,6 +132,9 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     _syncIfDifferent(_chatApiKeyCtrl, _config.chatApiKey);
     _syncIfDifferent(_chatModelIdCtrl, _config.chatModelId);
     _syncIfDifferent(_chatBaseUrlCtrl, _config.chatBaseUrl);
+    _syncIfDifferent(_visionTempCtrl, _config.visionTemperature.toString());
+    _syncIfDifferent(_reasoningTempCtrl, _config.reasoningTemperature.toString());
+    _syncIfDifferent(_chatTempCtrl, _config.chatTemperature.toString());
   }
 
   void _syncIfDifferent(TextEditingController ctrl, String value) {
@@ -243,6 +257,35 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     _chatApiKeyCtrl.text = _config.chatApiKey;
     _chatModelIdCtrl.text = _config.chatModelId;
     _chatBaseUrlCtrl.text = _config.chatBaseUrl;
+    _visionTempCtrl.text = _config.visionTemperature.toString();
+    _reasoningTempCtrl.text = _config.reasoningTemperature.toString();
+    _chatTempCtrl.text = _config.chatTemperature.toString();
+  }
+
+  TextEditingController _temperatureCtrl(int slotIndex) {
+    switch (slotIndex) {
+      case 0: return _visionTempCtrl;
+      case 1: return _reasoningTempCtrl;
+      case 2: return _chatTempCtrl;
+      default: return _visionTempCtrl;
+    }
+  }
+
+  String _temperatureDisplay(int slotIndex) {
+    final double t = slotIndex == 0
+        ? _config.visionTemperature
+        : slotIndex == 1
+            ? _config.reasoningTemperature
+            : _config.chatTemperature;
+    return t.toStringAsFixed(1);
+  }
+
+  void _setTemperature(int slotIndex, double value) {
+    switch (slotIndex) {
+      case 0: _config.setVisionTemperature(value);
+      case 1: _config.setReasoningTemperature(value);
+      case 2: _config.setChatTemperature(value);
+    }
   }
 
   Widget _buildSlotSection({
@@ -451,6 +494,37 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
             style: const TextStyle(fontSize: 14),
             decoration: _inputDecoration(cs).copyWith(
               hintText: 'API 端点 URL',
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Temperature
+          Row(
+            children: <Widget>[
+              _buildLabel(cs, 'Temperature'),
+              const SizedBox(width: 8),
+              Text(
+                '(Kimi K2=1.0, v1=0.6, 其他=0.7)',
+                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _temperatureCtrl(slotIndex),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onSubmitted: (String v) {
+              final double? t = double.tryParse(v.trim());
+              if (t != null && t >= 0 && t <= 2.0) {
+                _setTemperature(slotIndex, t);
+              } else {
+                // 无效输入，恢复原值
+                _temperatureCtrl(slotIndex).text = _temperatureDisplay(slotIndex);
+              }
+            },
+            style: const TextStyle(fontSize: 14),
+            decoration: _inputDecoration(cs).copyWith(
+              hintText: '0.6 ~ 1.0',
             ),
           ),
           const SizedBox(height: 12),
