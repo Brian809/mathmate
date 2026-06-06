@@ -47,20 +47,39 @@ class PipelineStreamService {
     }
     final String base64Image = base64Encode(bytes);
 
-    // Kimi 兼容：system prompt 合并到 user text 中，避免 vision API 拒绝 system role
-    final String userPrompt = '$ocrPrompt\n\n请识别图片中的数学题。';
-    final List<Map<String, dynamic>> messages = <Map<String, dynamic>>[
-      <String, dynamic>{
-        'role': 'user',
-        'content': <Map<String, dynamic>>[
-          <String, String>{'type': 'text', 'text': userPrompt},
-          <String, dynamic>{
-            'type': 'image_url',
-            'image_url': <String, String>{'url': 'data:image/jpeg;base64,$base64Image'},
-          },
-        ],
-      },
-    ];
+    final bool isKimiVision = pc.visionBaseUrl.contains('moonshot');
+    final List<Map<String, dynamic>> messages;
+    if (isKimiVision) {
+      // Kimi vision API 拒绝 system role，合并到 user text
+      final String userPrompt = '$ocrPrompt\n\n请识别图片中的数学题。';
+      messages = <Map<String, dynamic>>[
+        <String, dynamic>{
+          'role': 'user',
+          'content': <Map<String, dynamic>>[
+            <String, String>{'type': 'text', 'text': userPrompt},
+            <String, dynamic>{
+              'type': 'image_url',
+              'image_url': <String, String>{'url': 'data:image/jpeg;base64,$base64Image'},
+            },
+          ],
+        },
+      ];
+    } else {
+      // OpenAI/Qwen 等：标准 system + user 格式
+      messages = <Map<String, dynamic>>[
+        <String, String>{'role': 'system', 'content': ocrPrompt},
+        <String, dynamic>{
+          'role': 'user',
+          'content': <Map<String, dynamic>>[
+            <String, String>{'type': 'text', 'text': '请识别图片中的数学题。'},
+            <String, dynamic>{
+              'type': 'image_url',
+              'image_url': <String, String>{'url': 'data:image/jpeg;base64,$base64Image'},
+            },
+          ],
+        },
+      ];
+    }
 
     yield PipelineStreamEvent.status('AI 正在识别题目...');
 

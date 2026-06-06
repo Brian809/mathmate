@@ -166,22 +166,13 @@ class ChatStreamService {
       final Stream<String> lines =
           response.stream.transform(utf8.decoder).transform(const LineSplitter());
 
+      // 过滤 SSE 注释行（keep-alive），但不加超时——聊天场景下用户可能思考很久
       final Stream<String> contentLines = lines.where(
         (String line) => line.isNotEmpty && !line.startsWith(':'),
       );
 
-      await for (final String line in contentLines.timeout(
-        const Duration(seconds: 60),
-        onTimeout: (EventSink<String> sink) {
-          sink.add('data:TIMEOUT');
-          sink.close();
-        },
-      )) {
+      await for (final String line in contentLines) {
         if (_cancelled) break;
-        if (line == 'data:TIMEOUT') {
-          yield StreamChunk(error: '请求超时：60秒未收到新数据');
-          return;
-        }
         if (line.isEmpty || !line.startsWith('data:')) continue;
 
         final String data = line.substring(5).trim();
